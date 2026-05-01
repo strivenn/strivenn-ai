@@ -1,0 +1,1636 @@
+<!-- <script src="https://cdn.ckeditor.com/4.5.1/standard/ckeditor.js"></script> -->
+<script src="{{url_for('static',filename='main/js/jquery.js')}}"></script>
+<script src="{{url_for('static',filename='main/js/miscellaneous.js')}}"></script>
+<script src="{{url_for('static',filename='main/js/index.min.js')}}"></script>
+<link href="https://fonts.googleapis.com/css2?family=Oxygen:wght@300;400;700&display=swap" rel="stylesheet">
+
+<meta name="csrf-token" content="{{ csrf_token() }}" />
+<!-- <div id="dataSet" data-test="{{workflow_info}}"></div> -->
+<div class="container-fluid d-flex h-100">
+  <div id="dataSetWorkflow" data-workflow="{{workflow_info}}"></div>
+  <div id="chatHistory" data-history="{{history}}"></div>
+  <!-- Side menu with previous chats, adjusts for different screen sizes -->
+  <div class="row">
+    <div class="col-lg-2 side-menu bg-light flex-column h-100" id="prompt-history">
+      <button class="new-prompt text-align-center" onclick="newPrompt()">
+        + New Prompt
+      </button>
+      <ul class="list-group flex-grow-1" id="historyList">
+        {% for history in history_info %} {% set text = history['name'] %} {%
+        set character_limit = 18 %}
+        <li onclick="viewHistory('{{history.id}}','{{workflow_info.id}}')" data-workflow="{{workflow_info.id}}"
+          class="list-group-item text-align-center">
+          {{ text|slice(0, character_limit)if text|length > character_limit else
+          text }}
+        </li>
+        {% endfor %}
+      </ul>
+    </div>
+    <div class="col-lg-10 promptDisplay">
+      <div class="row">
+        <!-- <div class="col-2">
+          <nav class="navbar navbar-expand-md navbar-dark fixed-top bg-dark">
+            <div class="container">
+              <p class="navbar-brand workflow-title">{{workflow_info.name}}</p>
+            </div>
+        </nav>
+        </div>  -->
+
+        <div class="col-lg-12">
+          <div class="container">
+            <p class="navbar-brand workflow-title">{{workflow_info.name}}</p>
+          </div>
+          <div class="center-container" id="myWizardContainer">
+            <div>
+              <div class="stepwizard">
+                <div class="stepwizard-row setup-panel"></div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<script>
+  let user = '{{ current_user }}'
+  let profieIcon = user.split(' ').map(word => word.charAt(0).toUpperCase()).join('');
+  let jsonData = {{ workflow_info | tojson  }};
+  let historyData = document.querySelector("#chatHistory").dataset;
+  let chat_id = "";
+  let timelineHtml = "";
+  let wizardModals = "";
+  var xhr;
+  console.log("jsonData", jsonData)
+  if (jsonData.type == null) {
+    JSON.parse(jsonData.gpt_ids).forEach((e, i) => {
+      timelineHtml +=
+        i == 0
+          ? `<div class="stepwizard-step col-xs-3">
+                  <a href="#step-${i + 1}" type="button" class="btn ${i == 0 ? "btn-success stepwizard_circle" : ""} btn-circle">${i + 1}</a>
+                  <p><small data-toggle="tooltip" data-placement="bottom" title="${e.description}">${e.name}</small></p>
+            </div>`
+          : `<div class="stepwizard-step col-xs-3">
+                <a disabled href="#step-${i + 1}" type="button" class="btn ${i == 0 ? "btn-success" : ""}  btn-circle">${i + 1}</a>
+                <p><small data-toggle="tooltip" data-placement="bottom" title="${e.description}">${e.name}</small></p>
+            </div>`;
+
+      wizardModals += `<div data-set='${JSON.stringify(e)}' class="panel-primary setup-content" id="step-${i + 1}">
+              <div class="panel-heading">
+                <h1>${e.name}</h1>
+                <p>${e.description}</p>
+              </div>
+              <div class="panel-body" id="${e.id}">
+                <div class="prompt-body">
+                </div>
+                <div class="inputContainer">
+                <div class="chat-input-container">
+                <textarea id="inputText${e.id}" rows="3" cols="50" class='w-100 inputText' onkeyup="adjustHeight(event.target)" 
+                onkeypress="searchResults(event, ${e.id}, '${e.type}')" placeholder="Type here..."></textarea>
+                <button class="send-button" onclick="searchResults(event, ${e.id}, '${e.type}')">
+                  <svg class="send-icon" viewBox="0 0 24 24" fill="none" xmlns="
+                  http://www.w3.org/2000/svg">
+                  <path d="M21 12L2 12M21 12L16 17M21 12L16 7" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"></path>
+                  </svg>
+                </button>
+                </div>  
+                <div class="btn-container">
+                  ${i == 0 ? "" : `<button class="btn-primary btn custom_butt_col  previousBtn pull-left">Previous</button>`}
+                  ${i == JSON.parse(jsonData.gpt_ids).length - 1 ? "" : `<button class="btn-primary btn custom_butt_col  nextBtn pull-right hidden" disabled type="button">Next</button>`}
+                        </div>
+                        </div>
+                        </div>
+                    </div>`;
+    });
+    $(".stepwizard .stepwizard-row").append(timelineHtml);
+    $("#myWizardContainer").append(wizardModals);
+
+
+    // Get the protocol, hostname, and port from the window.location object
+    var protocol = window.location.protocol; // 'http:'
+    var hostname = window.location.hostname; // 'localhost' or 'example.com'
+    var port = window.location.port;         // '8080' or '' if standard port (80 for http, 443 for https)
+
+    // Construct the base URL
+    var baseUrl = protocol + "//" + hostname + (port ? ":" + port : "") + "/";
+
+    function gptTypeAjax(text, gptid, workflowid, isFirst, chatid) {
+      var csrfToken = $("meta[name=csrf-token]").attr("content");
+      var data = {
+        prompt: inputText,
+        gpt_id: gptId,
+        workflow_id: jsonData.id,
+        is_first: is_first,
+      };
+      data["chat_id"] = chat_id ? chat_id : null;
+      console.log(inputText);
+      xhr = $.ajax({
+        url: "/workflows/search",
+        method: "POST",
+        contentType: "application/json",
+        data: JSON.stringify(data),
+        headers: {
+          "X-CSRFToken": csrfToken,
+        },
+        success: function (data) {
+          chat_id = data.chat_id;
+          $('.send-button').css('background', '#0e7c7b');
+          $(`#inputText${gptId}`).next().attr("disabled", false);
+          $(`#inputText${gptId}`).next().removeClass("hidden");
+
+          $(`#inputText${gptId}`).parent().find(".prompt-body")
+            .append(`<p data-set="${data.chat_id}" class="prompt-text">${inputText.replace(/\n/g, "<br>")}</p>
+                                    <p class="prompt-response" data-set="${data.chat_id}">${data.message}</p>`);
+        },
+        error: function (error) { },
+      });
+    }
+
+  }
+
+  if (jsonData.type == "parallel") {
+
+    let wizardModals = `<div class="panel-primary setup-content" id="step-1">
+                      <div class="panel-heading">
+                           <h1>Test</h1>
+                           <p>e.description</p>
+                      </div>
+                      <div class="panel-body" id="${jsonData.id}">
+                          <div class="prompt-body">
+                            <div class="parallel-prompt">
+                              <div></div>
+                            </div>
+                        </div>
+                        <div class="inputContainer">
+                        <div class="chat-input-container">
+                        <textarea id="inputTextid" rows="3" cols="50" class='w-100 inputText' onkeyup="adjustHeight(event.target)" onkeypress="parallelSearch(event, ${jsonData.id}, '${jsonData.type}')" placeholder="Type here..."></textarea>
+                        <button class="send-button" onclick="parallelSearch(event, ${jsonData.id}, '${jsonData.type}')">
+                          <svg class="send-icon" viewBox="0 0 24 24" fill="none" xmlns="
+                          http://www.w3.org/2000/svg">
+                            <path d="M21 12L2 12M21 12L16 17M21 12L16 7" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"></path>
+                          </svg>
+                        </button>
+                        </div>              
+                      </div>
+                      </div>
+                  </div>`
+                
+    $("#myWizardContainer").append(wizardModals);
+  }
+
+  /*if (jsonData.type == "series_parallel") {
+    console.log(jsonData)
+    // Step 1: Group items with "is_root: 1"
+    const step1 = JSON.parse(jsonData.gpt_ids).filter(e => e.is_root === 1).map(e => `
+      <div class="stepwizard-step col-xs-3">
+        <a href="#step-1" type="button" class="btn btn-success stepwizard_circle btn-circle">1</a>
+        <p><small data-toggle="tooltip" data-placement="bottom" title="${e.description}">${e.name}</small></p>
+      </div>`).join("");
+
+    // Step 2: Group all other items
+    const step2 = `
+    <div class="stepwizard-step col-xs-3">
+      <a href="#step-2" type="button" class="btn btn-circle">2</a>
+      <p>
+        <small data-toggle="tooltip" data-placement="bottom" title="${JSON.parse(jsonData.gpt_ids).filter(e => e.is_root === 0).map(e => e.description || "No description").join(", ")}">
+          ${JSON.parse(jsonData.gpt_ids).filter(e => e.is_root === 0).map(e => e.name).join(", ")}
+        </small>
+      </p>
+    </div>`;
+
+    // Combine steps into timeline HTML
+    timelineHtml = step1 + step2;
+
+    $(".stepwizard .stepwizard-row").append(timelineHtml);
+
+    let wizardModals = `<div class="panel-primary setup-content" id="step-1">
+                      <div class="testing_series_parallel">
+                      <div class="panel-heading">
+                           <h1>Test</h1>
+                           <p>e.description</p>
+                      </div>
+                      </div>
+                      <div class="panel-body" id="${jsonData.id}">
+                          <div class="prompt-body">
+                            <div class="parallel-prompt">
+                              <div></div>
+                            </div>
+                        </div>
+                        <div class="inputContainer">
+                        <div class="chat-input-container">
+                        <textarea id="inputTextid" rows="3" cols="50" class='w-100 inputText' onkeyup="adjustHeight(event.target)" onkeypress="parallelSearch(event, ${jsonData.id}, '${jsonData.type}')" placeholder="Type here..."></textarea>
+                        <button class="send-button" onclick="parallelSearch(event, ${jsonData.id}, '${jsonData.type}')">
+                        <svg class="send-icon" viewBox="0 0 24 24" fill="none" xmlns="
+                        http://www.w3.org/2000/svg">
+                        <path d="M21 12L2 12M21 12L16 17M21 12L16 7" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"></path>
+                        </svg>
+                        </button>
+                        </div>              
+                      </div>
+                      </div>
+                  </div>` 
+
+                  let wizardModals = `
+                  <div class="panel-primary setup-content" id="step-1">
+                    <div class="panel-heading">
+                      <h1>${rootItems.map(e => e.name).join(", ")}</h1>
+                      <p>${rootItems.map(e => e.description || "").join(", ")}</p>
+                    </div>
+                    <div class="panel-body">
+                      <div class="prompt-body">
+                        
+                      </div>
+                    </div>
+                  </div>`;
+              
+                wizardModals += `
+                  <div class="panel-primary setup-content" id="step-2">
+                    <div class="panel-heading">
+                      <h1>${nonRootItems.map(e => e.name).join(", ")}</h1>
+                      <p>${nonRootItems.map(e => e.description || "").join(", ")}</p>
+                    </div>
+                    <div class="panel-body">
+                      <div class="prompt-body">
+                       
+                      </div>
+                    </div>
+                  </div>`;
+
+    $("#myWizardContainer").append(wizardModals);
+  } */
+
+  if (jsonData.type === "series_parallel") {
+    const gptItems = JSON.parse(jsonData.gpt_ids);
+  
+    // Grouping items by is_root
+    const rootItems = gptItems.filter(e => e.is_root === 1);
+    const nonRootItems = gptItems.filter(e => e.is_root === 0);
+  
+    // Step 1: Root Items
+    const step1Html = `
+      <div class="stepwizard-step col-xs-3">
+        <a href="#step-1" type="button" onclick="nextPrevSeriesParallel('prev')" class="btn btn-success step1Btn stepwizard_circle btn-circle">1</a>
+        <p><small 
+      ${rootItems.some(e => e.description) ? `data-toggle="tooltip" data-placement="bottom" title="${rootItems.map(e => e.description).filter(Boolean).join(", ")}"` : ''}>
+      ${rootItems.map(e => e.name).join(", ")}
+    </small></p>
+      </div>`;
+  
+    // Step 2: Non-Root Items
+    const step2Html = `
+      <div class="stepwizard-step col-xs-3">
+        <a href="#step-2" type="button" disabled class="btn btn-circle step2Btn" onclick="nextPrevSeriesParallel('next')">2</a>
+        <p><small 
+      ${nonRootItems.some(e => e.description) ? `data-toggle="tooltip" data-placement="bottom" title="${nonRootItems.map(e => e.description).filter(Boolean).join(", ")}"` : ''}>
+      ${nonRootItems.map(e => e.name).join(", ")}
+    </small></p>
+      </div>`;
+  
+    const timelineHtml = step1Html + step2Html;
+    $(".stepwizard .stepwizard-row").append(timelineHtml);
+  
+    // Modal for Step 1: Root Items
+    const step1DataSet = JSON.stringify(rootItems);
+    let wizardModals = `
+      <div data-set='${step1DataSet}' class="panel-primary setup-content" id="step-1">
+        <div class="panel-heading">
+          <h1>${rootItems.map(e => e.name).join(", ")}</h1>
+          <p>${rootItems.map(e => e.description).join(", ")}</p>
+        </div>
+        <div class="panel-body" id="${rootItems[0].id}">
+          <div class="prompt-body">
+            <div class="parallel-prompt">
+                              <div></div>
+                            </div>
+          </div>
+          <div class="inputContainer">
+          <div class="chat-input-container">
+                <textarea id="inputTextid" rows="3" cols="50" class='w-100 inputText' onkeyup="adjustHeight(event.target)" 
+                onkeypress="parallelSearch(event, ${rootItems[0].id}, '${rootItems[0].type}')" placeholder="Type here..."></textarea>
+                <button class="send-button" onclick="parallelSearch(event, ${rootItems[0].id}, '${rootItems[0].type}')">
+                  <svg class="send-icon" viewBox="0 0 24 24" fill="none" xmlns="
+                  http://www.w3.org/2000/svg">
+                  <path d="M21 12L2 12M21 12L16 17M21 12L16 7" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"></path>
+                  </svg>
+                </button>
+                </div> 
+                <div class="btn-container">
+            <!-- No Previous Button for Step 1 -->
+            <button class="btn-primary btn custom_butt_col seriesParallelNextBtn nextBtn pull-right hidden" disabled type="button">Next</button>
+          </div>
+          </div>
+          
+          
+        </div>
+      </div>`;
+  
+    // Modal for Step 2: Non-Root Items
+    const step2DataSet = JSON.stringify(nonRootItems);
+    wizardModals += `
+      <div data-set='${step2DataSet}' class="panel-primary setup-content" id="step-2" style="display:none;">
+        <div class="panel-heading">
+          <h1>${nonRootItems.map(e => e.name).join(", ")}</h1>
+          <p>${nonRootItems.map(e => e.description).join(", ")}</p>
+        </div>
+        <div class="panel-body" id="${nonRootItems[0].id}">
+          <div class="prompt-body">
+           <div class="parallel-prompt">
+                              <div></div>
+                            </div>
+          </div>
+          <div class="inputContainer">
+          <div class="chat-input-container">
+                <textarea id="inputTextid" rows="3" cols="50" class='w-100 inputText' onkeyup="adjustHeight(event.target)" 
+                onkeypress="parallelSearch(event, ${nonRootItems[0].id}, '${nonRootItems[0].type}')" placeholder="Type here..."></textarea>
+                <button class="send-button" onclick="parallelSearch(event, ${nonRootItems[0].id}, '${nonRootItems[0].type}')">
+                  <svg class="send-icon" viewBox="0 0 24 24" fill="none" xmlns="
+                  http://www.w3.org/2000/svg">
+                  <path d="M21 12L2 12M21 12L16 17M21 12L16 7" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"></path>
+                  </svg>
+                </button>
+                </div> 
+                <div class="btn-container">
+            <button class="btn-primary btn custom_butt_col seriesParallelPreviousBtn pull-left">Previous</button>
+            <!-- No Next Button for the Last Step -->
+          </div>
+          </div>
+          
+          
+        </div>
+      </div>`;
+  
+    $("#myWizardContainer").append(wizardModals);
+    $("#myWizardContainer a:first").removeClass('btn-success').addClass('stepwizard_circle')
+  }
+  
+  function stepCircleChange(){
+    console.log("stepCircleChange",jsonData)
+    if(jsonData.type !== "series_parallel"){
+    $('.setup-content').each(function () { 
+        let childElement = $(this);    
+        let elementId = childElement.attr('id');   
+         var linkedElement = $('a[href="#' + elementId + '"]');
+        let promptBody = childElement.find('.prompt-body');
+            if($.trim(promptBody.html()) == ""){
+              console.log("empty")
+              linkedElement.addClass("stepwizard_circle");
+              linkedElement.removeClass("btn-success")
+            } else {
+              console.log("not empty")
+              linkedElement.removeClass("stepwizard_circle");
+              linkedElement.addClass("btn-success")
+            }
+    });
+  }else if(jsonData.type === "series_parallel"){
+    $('.setup-content').each(function () { 
+      let childElement = $(this);    
+      let elementId = childElement.attr('id');   
+       var linkedElement = $('a[href="#' + elementId + '"]');
+      let promptBody = childElement.find('.prompt-body');
+          if($.trim(promptBody.text()) == ""){
+            console.log("empty")
+            linkedElement.addClass("stepwizard_circle");
+            linkedElement.removeClass("btn-success")
+          } else {
+            console.log("not empty")
+            linkedElement.removeClass("stepwizard_circle");
+            linkedElement.addClass("btn-success")
+          }
+  });
+  }
+}
+
+  function parallelSearch(event, workflow_id, flowType) {
+
+    var protocol = window.location.protocol; // 'http:'
+    var hostname = window.location.hostname; // 'localhost' or 'example.com'
+    var port = window.location.port;         // '8080' or '' if standard port (80 for http, 443 for https)
+
+    // Construct the base URL
+    var baseUrl = protocol + "//" + hostname + (port ? ":" + port : "") + "/";
+
+    $('#step-2 .prompt-body').addClass('parallel-prompt-body')
+    let editIconHtml = `<span class="individualChatEdit glyphicon glyphicon-pencil ml-2" aria-hidden="true" style="margin-left: 10px;font-size: 12px;cursor: pointer;"></span>`;
+    if (event.shiftKey) { return }
+    
+    // $(`.send-button`).attr("disabled", true);
+    if ((event.key === "Enter" && !event.shiftKey) || event.type === "click") {
+      let currentPage = $('.stepwizard_circle').hasClass('step2Btn') ? '2' :'1'
+      let inputText = currentPage == 1 ? document.querySelector(`#step-1 #inputTextid`).value : document.querySelector(`#step-2 #inputTextid`).value;
+
+      if (inputText.trim() !== "") {
+        if(currentPage == 1){
+          
+          $(`#step-1 #inputTextid`)
+            .parent()
+            .parent()
+            .parent()
+            .find(".prompt-body .parallel-prompt")
+            .append(
+              `<div><div class="profileimage">
+                      <div class="imageprofile">${profieIcon}</div>
+                      <div class="profilename">You</div>
+                  </div>
+                  <p class="prompt-text prompt${workflow_id}">${inputText.replace(/\n/g, "<br>")} ${editIconHtml}</p>
+                  <div class="response">
+                    <div class="profileimage">
+                                    <div class="imageprofile"> <svg fill="#000000" width="15px" height="15px" viewBox="0 0 24 24" id="chat" data-name="Line Color" xmlns="http://www.w3.org/2000/svg" class="icon line-color"><path id="primary" d="M18.81,16.23,20,21l-4.95-2.48A9.84,9.84,0,0,1,12,19c-5,0-9-3.58-9-8s4-8,9-8,9,3.58,9,8A7.49,7.49,0,0,1,18.81,16.23Z" style="fill: none; stroke: rgb(0, 0, 0); stroke-linecap: round; stroke-linejoin: round; stroke-width: 2;"></path></svg> </div>
+                                    <div class="profilename">Strivenn</div>
+                    </div>
+                    <div class="loading-dots">
+                      <div class="loading-dots--dot"></div>
+                      <div class="loading-dots--dot"></div>
+                      <div class="loading-dots--dot"></div>
+                    </div>
+                  
+                  
+                    <p class="prompt-response">
+                    
+  
+                      </p>
+                    </div>
+                  
+                  </div>`
+            );
+  
+          $(`#step-1 #inputTextid`).val("").attr("placeholder", "Type here...").css("height", "70px");
+        }else if(currentPage == 2){
+          
+          scrollAnimation("#step-2 .prompt-body")
+          $(`#step-2 #inputTextid`)
+            .parent()
+            .parent()
+            .parent()
+            .find(".prompt-body .parallel-prompt")
+            .append(
+              `<div><div class="profileimage">
+                      <div class="imageprofile">${profieIcon}</div>
+                      <div class="profilename">You</div>
+                  </div>
+                  <p class="prompt-text prompt${workflow_id}">${inputText.replace(/\n/g, "<br>")} ${editIconHtml}</p>
+                  <div class="response">
+                    <div class="profileimage">
+                                    <div class="imageprofile"> <svg fill="#000000" width="15px" height="15px" viewBox="0 0 24 24" id="chat" data-name="Line Color" xmlns="http://www.w3.org/2000/svg" class="icon line-color"><path id="primary" d="M18.81,16.23,20,21l-4.95-2.48A9.84,9.84,0,0,1,12,19c-5,0-9-3.58-9-8s4-8,9-8,9,3.58,9,8A7.49,7.49,0,0,1,18.81,16.23Z" style="fill: none; stroke: rgb(0, 0, 0); stroke-linecap: round; stroke-linejoin: round; stroke-width: 2;"></path></svg> </div>
+                                    <div class="profilename">Strivenn</div>
+                    </div>
+                    <div class="loading-dots">
+                      <div class="loading-dots--dot"></div>
+                      <div class="loading-dots--dot"></div>
+                      <div class="loading-dots--dot"></div>
+                    </div>
+                  
+                  
+                    <p class="prompt-response">
+                    
+  
+                      </p>
+                    </div>
+                  
+                  </div>`
+            );
+  
+          $(`#step-2 #inputTextid`).val("").attr("placeholder", "Type here...").css("height", "70px");
+        }
+        is_first = chat_id ? false : true;
+        var csrfToken = $("meta[name=csrf-token]").attr("content");
+        console.log("jsonData",jsonData)
+        const seriesParallelGptId = JSON.parse(jsonData.gpt_ids)
+        var data = {
+          workflow_id: jsonData.id,
+          prompt: inputText,
+          is_first: is_first,
+          gpt_id: currentPage == 1 ? seriesParallelGptId[0].id : 1,
+          thread_id: null,
+          is_root : currentPage == 1 ? 1 : 0
+        };
+
+        data["chat_id"] = chat_id ? chat_id : null;
+        xhr = $.ajax({
+          // url: flowType == "series_parallel" ? "/workflow/search_series_parallel" : "/workflow/search_parallel", // Replace with your API endpoint
+          url: "/workflows/search_series_parallel", // Replace with your API endpoint
+          method: "POST",
+          contentType: "application/json",
+          data: JSON.stringify(data),
+          headers: {
+            "X-CSRFToken": csrfToken,
+          },
+          success: function (data) {
+            $('.seriesParallelNextBtn').removeClass('hidden')
+            $('.seriesParallelNextBtn').attr('disabled',false)
+            $(".loading-dots").remove();
+            chat_id = data.chat_id;
+            let copyTextJson = { "text": data.message }
+            let jsonString = JSON.stringify(copyTextJson)
+            let uint8Array = new TextEncoder().encode(jsonString);
+            let myData = uint8ToBase64(uint8Array);
+
+
+            let messageElement = document.querySelector('.prompt-response');
+            //console.log("paralleldata", data)
+            if(data.error)
+              {
+                
+                $(`#inputTextid`).next().attr("disabled", false);
+                let lastMessageElement = document.querySelectorAll('.prompt-response');
+                currentEl = lastMessageElement[lastMessageElement.length - 1];
+                // Add the 'text-danger' class to the correct element
+                currentEl.classList.add('text-danger');
+
+                // Set the error message or new content
+                currentEl.innerHTML = data.message;
+          
+                // If needed, add the copy/download button HTML as well
+                let copyButtonHtml = `
+                  <div class="mt-1 flex justify-start gap-3 empty:hidden response-actions">
+                    <div class="text-gray-400 flex self-end lg:self-center justify-center lg:justify-start mt-0 -ml-1 h-7 visible">
+                      <span class="copy" data-state="closed" title="Copy">
+                        <button class="flex items-center gap-1.5 rounded-md p-1 text-xs text-token-text-tertiary hover:text-token-text-primary md:invisible md:group-hover:visible md:group-[.final-completion]:visible" onclick="copyText(event,'${myData}')">
+                          <svg width="24" height="24" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg" class="icon-md" style="border: none !important; background: none !important;">
+                            <path fill-rule="evenodd" clip-rule="evenodd" d="M12 4C10.8954 4 10 4.89543 10 6H14C14 4.89543 13.1046 4 12 4ZM8.53513 4C9.22675 2.8044 10.5194 2 12 2C13.4806 2 14.7733 2.8044 15.4649 4H17C18.6569 4 20 5.34315 20 7V19C20 20.6569 18.6569 22 17 22H7C5.34315 22 4 20.6569 4 19V7C4 5.34315 5.34315 4 7 4H8.53513ZM8 6H7C6.44772 6 6 6.44772 6 7V19C6 19.5523 6.44772 20 7 20H17C17.5523 20 18 19.5523 18 19V7C18 6.44772 17.5523 6 17 6H16C16 7.10457 15.1046 8 14 8H10C8.89543 8 8 7.10457 8 6Z" fill="currentColor"></path>
+                          </svg>
+                        </button>
+                      </span>
+                      <span class="download" data-state="closed" title="Download">
+                        <button class="download-btn" onclick="downloadContent(event,'${myData}')">
+                          <svg width="24" height="24" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg" class="icon-md" style="border: none !important; background: none !important;">
+                            <path fill-rule="evenodd" clip-rule="evenodd" d="M12 2C12.5523 2 13 2.44772 13 3V13.5858L15.2929 11.2929C15.6834 10.9024 16.3166 10.9024 16.7071 11.2929C17.0976 11.6834 17.0976 12.3166 16.7071 12.7071L12.7071 16.7071C12.3166 17.0976 11.6834 17.0976 11.2929 16.7071L7.29289 12.7071C6.90237 12.3166 6.90237 11.6834 7.29289 11.2929C7.68342 10.9024 8.31658 10.9024 8.70711 11.2929L11 13.5858V3C11 2.44772 11.4477 2 12 2ZM4 20C4 19.4477 4.44772 19 5 19H19C19.5523 19 20 19.4477 20 20C20 20.5523 19.5523 21 19 21H5C4.44772 21 4 20.5523 4 20Z" fill="currentColor" stroke="none"></path>
+                          </svg>
+                        </button>
+                      </span>
+                      ${currentPage == 1 ?`<span class="next" data-state="closed" title="Next">
+                          <button class="nextBtn p-1 rounded-md text-token-text-tertiary hover:text-token-text-primary md:invisible md:group-hover:visible md:group-[.final-completion]:visible" onclick="nextPromptFromResponse(event,'${myData}')">
+                            <div class="flex items-center gap-1.5 text-xs">
+                              <svg fill="#0e7c7b" width="24px" height="24px" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg" style="border: none !important; background: none !important;">
+                                <path fill-rule="evenodd" d="M4.10514201,11.8070619 L2.74013818,2.2520351 L22.236068,12 L2.74013818,21.7479649 L4.10514201,12.1929381 L4.87689437,12 L4.10514201,11.8070619 Z M5.25986182,5.7479649 L5.89485799,10.1929381 L13.1231056,12 L5.89485799,13.8070619 L5.25986182,18.2520351 L17.763932,12 L5.25986182,5.7479649 Z"/>
+                              </svg>
+                            </div>
+                          </button>
+                        </span>` : "" }
+                     
+                    </div>
+                  </div>
+                `;
+
+                // Append the copy button to the parent
+                currentEl.parentElement.parentElement.innerHTML += copyButtonHtml;
+                $(`a[href="#step-1"]`).addClass('btn-success')
+              }
+            else
+            {
+            // Splitting text by line breaks
+            var lines = data.message;
+            // Constructing HTML elements
+            var htmlContent = '';
+            for (var i = 0; i < lines.length; i++) {
+              // Checking if line is empty
+              if (lines[i].message.trim() === '') continue;
+
+              htmlContent += `<h3>  ${lines[i].type_name}  </h3>`;
+              htmlContent += `<p>${lines[i].message.trim().replace(/\n/g, '<br>')}</p>`;
+
+              lines[i].image_url ? htmlContent += `<br><div class="position-relative"><img src="${baseUrl + lines[i].image_path}">
+                  <div class="position-absolute download-icon" onclick="downloadImage('${baseUrl + lines[i].image_path}')">
+                  <svg width="20px" height="20px" viewBox="0 0 15 15" fill="none" xmlns="http://www.w3.org/2000/svg">
+                  <path fill-rule="evenodd" clip-rule="evenodd" d="M7.50005 1.04999C7.74858 1.04999 7.95005 1.25146 7.95005 1.49999V8.41359L10.1819 6.18179C10.3576 6.00605 10.6425 6.00605 10.8182 6.18179C10.994 6.35753 10.994 6.64245 10.8182 6.81819L7.81825 9.81819C7.64251 9.99392 7.35759 9.99392 7.18185 9.81819L4.18185 6.81819C4.00611 6.64245 4.00611 6.35753 4.18185 6.18179C4.35759 6.00605 4.64251 6.00605 4.81825 6.18179L7.05005 8.41359V1.49999C7.05005 1.25146 7.25152 1.04999 7.50005 1.04999ZM2.5 10C2.77614 10 3 10.2239 3 10.5V12C3 12.5539 3.44565 13 3.99635 13H11.0012C11.5529 13 12 12.5528 12 12V10.5C12 10.2239 12.2239 10 12.5 10C12.7761 10 13 10.2239 13 10.5V12C13 13.1041 12.1062 14 11.0012 14H3.99635C2.89019 14 2 13.103 2 12V10.5C2 10.2239 2.22386 10 2.5 10Z" fill="#000000" />
+                  </svg></div></div>` : ""
+            }
+            data.chat_name ? $("#historyList .today").length ? $('#prompt-history ul li:first').before(`<li data-workflow="8" class="list-group-item text-align-center" onclick="viewHistory(event.target,${data.chat_id},${jsonData.id})">${data.chat_name}</li>`) : $("#historyList").append(`<h4 class="today">Today</h4><li data-workflow="8" class="list-group-item text-align-center" onclick="viewHistory(event.target,${data.chat_id},${jsonData.id})">${data.chat_name}</li>`) : "";
+           
+
+            let currentEl = document.querySelector('.prompt-response:last-child');
+            currentEl.innerHTML = htmlContent;
+            let copyButtonHtml = `<div class="mt-1 flex justify-start gap-3 empty:hidden response-actions">
+                                      <div class="text-gray-400 flex self-end lg:self-center justify-center lg:justify-start mt-0 -ml-1 h-7 visible">
+                                        <span class="copy" data-state="closed" title="Copy">
+                                          <button class="flex items-center gap-1.5 rounded-md p-1 text-xs text-token-text-tertiary hover:text-token-text-primary md:invisible md:group-hover:visible md:group-[.final-completion]:visible" onclick="copyText(event,'${myData}')">
+                                            <svg width="24" height="24" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg" class="icon-md" style="border: none !important; background: none !important;">
+                                              <path fill-rule="evenodd" clip-rule="evenodd" d="M12 4C10.8954 4 10 4.89543 10 6H14C14 4.89543 13.1046 4 12 4ZM8.53513 4C9.22675 2.8044 10.5194 2 12 2C13.4806 2 14.7733 2.8044 15.4649 4H17C18.6569 4 20 5.34315 20 7V19C20 20.6569 18.6569 22 17 22H7C5.34315 22 4 20.6569 4 19V7C4 5.34315 5.34315 4 7 4H8.53513ZM8 6H7C6.44772 6 6 6.44772 6 7V19C6 19.5523 6.44772 20 7 20H17C17.5523 20 18 19.5523 18 19V7C18 6.44772 17.5523 6 17 6H16C16 7.10457 15.1046 8 14 8H10C8.89543 8 8 7.10457 8 6Z" fill="currentColor">
+                                              </path>
+                                            </svg>
+                                          </button>
+                                        </span>
+
+                                        <span class="download" data-state="closed" title="Download">
+                                          <button class="download-btn" onclick="downloadContent(event,'${myData}')">
+                                            <svg width="24" height="24" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg" class="icon-md" style="border: none !important; background: none !important;">
+                                              <path fill-rule="evenodd" clip-rule="evenodd" d="M12 2C12.5523 2 13 2.44772 13 3V13.5858L15.2929 11.2929C15.6834 10.9024 16.3166 10.9024 16.7071 11.2929C17.0976 11.6834 17.0976 12.3166 16.7071 12.7071L12.7071 16.7071C12.3166 17.0976 11.6834 17.0976 11.2929 16.7071L7.29289 12.7071C6.90237 12.3166 6.90237 11.6834 7.29289 11.2929C7.68342 10.9024 8.31658 10.9024 8.70711 11.2929L11 13.5858V3C11 2.44772 11.4477 2 12 2ZM4 20C4 19.4477 4.44772 19 5 19H19C19.5523 19 20 19.4477 20 20C20 20.5523 19.5523 21 19 21H5C4.44772 21 4 20.5523 4 20Z" fill="currentColor" stroke="none"></path>
+                                            </svg>
+                                          </button>
+                                        </span>
+                                       ${currentPage == 1 ?`<span class="next" data-state="closed" title="Next">
+                          <button class="nextBtn p-1 rounded-md text-token-text-tertiary hover:text-token-text-primary md:invisible md:group-hover:visible md:group-[.final-completion]:visible" onclick="nextPromptFromResponse(event,'${myData}')">
+                            <div class="flex items-center gap-1.5 text-xs">
+                              <svg fill="#0e7c7b" width="24px" height="24px" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg" style="border: none !important; background: none !important;">
+                                <path fill-rule="evenodd" d="M4.10514201,11.8070619 L2.74013818,2.2520351 L22.236068,12 L2.74013818,21.7479649 L4.10514201,12.1929381 L4.87689437,12 L4.10514201,11.8070619 Z M5.25986182,5.7479649 L5.89485799,10.1929381 L13.1231056,12 L5.89485799,13.8070619 L5.25986182,18.2520351 L17.763932,12 L5.25986182,5.7479649 Z"/>
+                              </svg>
+                            </div>
+                          </button>
+                        </span>` : "" }
+                                      </div>
+                                    </div>`;
+                                    if(jsonData.type == "series_parallel"){
+                                      currentPage == 1 ? scrollAnimation("#step-1 .prompt-body") : scrollAnimation("#step-2 .prompt-body")
+                                    }
+                                    if(currentPage == 1 && is_first){
+                                      $('#myWizardContainer .stepwizard-step').eq(1).find('a').attr('disabled', false);
+                                    }
+            currentEl.parentElement.parentElement.innerHTML += copyButtonHtml
+            currentPage == 1 ? $('#myWizardContainer .stepwizard-step').eq(0).find('a').removeClass('stepwizard_circle').addClass('btn-success') : $('#myWizardContainer .stepwizard-step').eq(1).find('a').removeClass('stepwizard_circle').addClass('btn-success');
+          }},
+          error: function (error) {
+            // Handle errors here
+            $(`#inputTextid`).next().attr("disabled", false);
+            $(`.prompt${workflow_id}`).find('.prompt-response').addClass('text-danger')
+            $(`.prompt${workflow_id}`).find('.prompt-response').text("An unexpected error occurred. Please try again later.")
+            $(".loading-dots").remove();
+          }
+        })
+        $(`.send-button`).attr("disabled", false);
+
+      }
+    }
+
+  }
+
+  function viewHistory(element, chatId, workflowId) {
+    chat_id = chatId
+
+    $('.selected').removeClass('selected')
+    $(element).addClass("selected")
+
+    $(".prompt-body").html("");
+
+    let data = [];
+    var csrfToken = $("meta[name=csrf-token]").attr("content");
+    url = "/workflows/prompt_history/" + workflowId + "/" + chatId;
+    xhr = $.ajax({
+      url: url, // Replace with your API endpoint
+      method: "POST",
+      contentType: "application/json",
+      data: JSON.stringify(data),
+      headers: {
+        "X-CSRFToken": csrfToken,
+      },
+      success: function (data) {
+        if (jsonData.type == null) {
+          $("#myWizardContainer a")
+            .parent()
+            .next()
+            .find("a")
+            .attr("disabled", true);
+          let chatContent;
+          let gptTypeCount = {};
+          data.history.forEach((chats, index) => {
+
+            const gptTypeId = chats.gpt_type_id;
+            gptTypeCount[gptTypeId] = (gptTypeCount[gptTypeId] || 0) + 1;
+            let copyTextJson = { "text": chats.response.message }
+            let jsonString = JSON.stringify(copyTextJson)
+            let uint8Array = new TextEncoder().encode(jsonString);
+            let textCopied = uint8ToBase64(uint8Array);
+            chatContent = `
+                <div class="profileimage">
+                                  <div class="imageprofile">${profieIcon}</div>
+                                  <div class="profilename">You</div>
+                              </div>
+                <p class="prompt-text prompt${chats.gpt_type_id}">${chats.prompt.replace(/\n/g, "<br>")
+              }</p><div class="response">
+                  <div class="profileimage">
+                                  <div class="imageprofile"> <svg fill="#000000" width="15px" height="15px" viewBox="0 0 24 24" id="chat" data-name="Line Color" xmlns="http://www.w3.org/2000/svg" class="icon line-color"><path id="primary" d="M18.81,16.23,20,21l-4.95-2.48A9.84,9.84,0,0,1,12,19c-5,0-9-3.58-9-8s4-8,9-8,9,3.58,9,8A7.49,7.49,0,0,1,18.81,16.23Z" style="fill: none; stroke: rgb(0, 0, 0); stroke-linecap: round; stroke-linejoin: round; stroke-width: 2;"></path></svg> </div>
+                                  <div class="profilename">Strivenn</div>
+                              </div>
+                  ${chats.response.image_path ? `<br><div class="position-relative"><img src="${baseUrl + chats.response.image_path}">
+                    <div class="position-absolute download-icon" onclick="downloadImage('${baseUrl + chats.response.image_path}')">
+                    <svg width="20px" height="20px" viewBox="0 0 15 15" fill="none" xmlns="http://www.w3.org/2000/svg">
+                    <path fill-rule="evenodd" clip-rule="evenodd" d="M7.50005 1.04999C7.74858 1.04999 7.95005 1.25146 7.95005 1.49999V8.41359L10.1819 6.18179C10.3576 6.00605 10.6425 6.00605 10.8182 6.18179C10.994 6.35753 10.994 6.64245 10.8182 6.81819L7.81825 9.81819C7.64251 9.99392 7.35759 9.99392 7.18185 9.81819L4.18185 6.81819C4.00611 6.64245 4.00611 6.35753 4.18185 6.18179C4.35759 6.00605 4.64251 6.00605 4.81825 6.18179L7.05005 8.41359V1.49999C7.05005 1.25146 7.25152 1.04999 7.50005 1.04999ZM2.5 10C2.77614 10 3 10.2239 3 10.5V12C3 12.5539 3.44565 13 3.99635 13H11.0012C11.5529 13 12 12.5528 12 12V10.5C12 10.2239 12.2239 10 12.5 10C12.7761 10 13 10.2239 13 10.5V12C13 13.1041 12.1062 14 11.0012 14H3.99635C2.89019 14 2 13.103 2 12V10.5C2 10.2239 2.22386 10 2.5 10Z" fill="#000000" />
+                    </svg></div></div>` : ``}<div class="pull-right"></div><p class="prompt-response">${chats.response.message.replace(/\n/g, "<br>")}</p></div>
+                    
+  
+                    <div class="mt-1 flex justify-start gap-3 empty:hidden response-actions">
+                      <div class="text-gray-400 flex self-end lg:self-center justify-center lg:justify-start mt-0 -ml-1 h-7 visible">
+                        <span class="copy" data-state="closed" title="Copy">
+                          <button class="flex items-center gap-1.5 rounded-md p-1 text-xs text-token-text-tertiary hover:text-token-text-primary md:invisible md:group-hover:visible md:group-[.final-completion]:visible" onclick="copyText(event,'${textCopied}')">
+                            <svg width="24" height="24" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg" class="icon-md" style="border: none !important; background: none !important;">
+                              <path fill-rule="evenodd" clip-rule="evenodd" d="M12 4C10.8954 4 10 4.89543 10 6H14C14 4.89543 13.1046 4 12 4ZM8.53513 4C9.22675 2.8044 10.5194 2 12 2C13.4806 2 14.7733 2.8044 15.4649 4H17C18.6569 4 20 5.34315 20 7V19C20 20.6569 18.6569 22 17 22H7C5.34315 22 4 20.6569 4 19V7C4 5.34315 5.34315 4 7 4H8.53513ZM8 6H7C6.44772 6 6 6.44772 6 7V19C6 19.5523 6.44772 20 7 20H17C17.5523 20 18 19.5523 18 19V7C18 6.44772 17.5523 6 17 6H16C16 7.10457 15.1046 8 14 8H10C8.89543 8 8 7.10457 8 6Z" fill="currentColor">
+                              </path>
+                            </svg>
+                          </button>
+                        </span>
+                        <span class="download" data-state="closed" title="Download">
+                          
+                          <button class="download-btn items-center gap-1.5 rounded-md p-1 text-xs text-token-text-tertiary hover:text-token-text-primary md:invisible md:group-hover:visible md:group-[.final-completion]:visible" onclick="downloadContent(event,'${textCopied}')">
+                            <svg width="24" height="24" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg" class="icon-md" style="border: none !important; background: none !important;">
+                              <path fill-rule="evenodd" clip-rule="evenodd" d="M12 2C12.5523 2 13 2.44772 13 3V13.5858L15.2929 11.2929C15.6834 10.9024 16.3166 10.9024 16.7071 11.2929C17.0976 11.6834 17.0976 12.3166 16.7071 12.7071L12.7071 16.7071C12.3166 17.0976 11.6834 17.0976 11.2929 16.7071L7.29289 12.7071C6.90237 12.3166 6.90237 11.6834 7.29289 11.2929C7.68342 10.9024 8.31658 10.9024 8.70711 11.2929L11 13.5858V3C11 2.44772 11.4477 2 12 2ZM4 20C4 19.4477 4.44772 19 5 19H19C19.5523 19 20 19.4477 20 20C20 20.5523 19.5523 21 19 21H5C4.44772 21 4 20.5523 4 20Z" fill="currentColor" stroke="none"></path>
+                            </svg>
+                          </button>
+                        </span>
+                        <span class="next" data-state="closed" title="Next">
+                          <button class="nextBtn p-1 rounded-md text-token-text-tertiary hover:text-token-text-primary md:invisible md:group-hover:visible md:group-[.final-completion]:visible" onclick="nextPromptFromResponse(event,'${textCopied}')">
+                            <div class="flex items-center gap-1.5 text-xs">
+                              <svg fill="#0e7c7b" width="24px" height="24px" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg" style="border: none !important; background: none !important;">
+                                <path fill-rule="evenodd" d="M4.10514201,11.8070619 L2.74013818,2.2520351 L22.236068,12 L2.74013818,21.7479649 L4.10514201,12.1929381 L4.87689437,12 L4.10514201,11.8070619 Z M5.25986182,5.7479649 L5.89485799,10.1929381 L13.1231056,12 L5.89485799,13.8070619 L5.25986182,18.2520351 L17.763932,12 L5.25986182,5.7479649 Z"/>
+                              </svg>
+                            </div>
+                          </button>
+                        </span>
+                      </div>
+                    </div>`;
+
+            $(`#${chats.gpt_type_id} > div.prompt-body`).append(chatContent);
+            $(`#inputText${chats.gpt_type_id}`)
+              .parent()
+              .next()
+              .find(".nextBtn")
+              .attr("disabled", false);
+            $(`#inputText${chats.gpt_type_id}`)
+              .parent()
+              .next()
+              .find(".nextBtn")
+              .removeClass("hidden");
+
+          });
+          let previousResponseGpt = Object.keys(gptTypeCount)
+          previousResponseGpt.forEach((e, i) => {
+            $("#myWizardContainer a").eq(i)
+              .parent()
+              .next()
+              .find("a")
+              .attr("disabled", false);
+
+          })
+          $("#myWizardContainer a").eq(0).click()
+
+          let stepwizardSteps = $('.stepwizard-row .stepwizard-step');
+          let isLastButtonSuccess = stepwizardSteps.length > 1;
+          $('span.next').css("display", isLastButtonSuccess ? "inline-block" : "none");
+        }
+        if (jsonData.type == "parallel") {
+          $(".prompt-body").append(
+            `<div class="parallel-prompt"></div>`)
+
+          let editIconHtml = `<span class="individualChatEdit glyphicon glyphicon-pencil ml-2" aria-hidden="true" style="margin-left: 10px;font-size: 12px;cursor: pointer;"></span>`;
+          data.history.forEach((chats, index) => {
+            let chatContent;
+
+            let copyTextJson = { "text": chats.response }
+            // let textCopied = btoa(encodeURIComponent(JSON.stringify(copyTextJson)));
+            chatContent = `<div class="profileimage">
+              <div class="imageprofile">${profieIcon}</div>
+              <div class="profilename">You</div>
+              </div>  
+              <p class="prompt-text prompt${chats.id}">${chats.prompt} ${editIconHtml}</p>
+              <div class="response">
+              <div class="profileimage">
+                          <div class="imageprofile"> <svg fill="#000000" width="15px" height="15px" viewBox="0 0 24 24" id="chat" data-name="Line Color" xmlns="http://www.w3.org/2000/svg" class="icon line-color"><path id="primary" d="M18.81,16.23,20,21l-4.95-2.48A9.84,9.84,0,0,1,12,19c-5,0-9-3.58-9-8s4-8,9-8,9,3.58,9,8A7.49,7.49,0,0,1,18.81,16.23Z" style="fill: none; stroke: rgb(0, 0, 0); stroke-linecap: round; stroke-linejoin: round; stroke-width: 2;"></path></svg> </div>
+                          <div class="profilename">Strivenn</div>
+              </div>
+
+              <div class="pull-right"></div><p class="prompt-response ">${chats.response}</p></div>`
+            $(`div.prompt-body .parallel-prompt`).append(chatContent);
+            // Get the protocol, hostname, and port from the window.location object
+            var protocol = window.location.protocol; // 'http:'
+            var hostname = window.location.hostname; // 'localhost' or 'example.com'
+            var port = window.location.port;         // '8080' or '' if standard port (80 for http, 443 for https)
+
+            // Construct the base URL
+            var baseUrl = protocol + "//" + hostname + (port ? ":" + port : "") + "/";
+
+            var lines = chats.response
+            let jsonString = JSON.stringify(copyTextJson)
+            let uint8Array = new TextEncoder().encode(jsonString);
+            let myData = uint8ToBase64(uint8Array);
+            // Constructing HTML elements
+            var htmlContent = '';
+            for (var i = 0; i < lines.length; i++) {
+              // Checking if line is empty
+              if (lines[i].message.trim() === '') continue;
+
+              htmlContent += `<h3>  ${lines[i].type_name}  </h3>`;
+              htmlContent += `<p>  ${lines[i].message.trim().replace(/\n/g, '<br>')}  </p>`;
+              lines[i].image_url ? htmlContent += `<br><div class="position-relative"><img src="${baseUrl + lines[i].image_path}">
+                <div class="position-absolute download-icon" onclick="downloadImage('${baseUrl + lines[i].image_path}')">
+                <svg width="20px" height="20px" viewBox="0 0 15 15" fill="none" xmlns="http://www.w3.org/2000/svg">
+                <path fill-rule="evenodd" clip-rule="evenodd" d="M7.50005 1.04999C7.74858 1.04999 7.95005 1.25146 7.95005 1.49999V8.41359L10.1819 6.18179C10.3576 6.00605 10.6425 6.00605 10.8182 6.18179C10.994 6.35753 10.994 6.64245 10.8182 6.81819L7.81825 9.81819C7.64251 9.99392 7.35759 9.99392 7.18185 9.81819L4.18185 6.81819C4.00611 6.64245 4.00611 6.35753 4.18185 6.18179C4.35759 6.00605 4.64251 6.00605 4.81825 6.18179L7.05005 8.41359V1.49999C7.05005 1.25146 7.25152 1.04999 7.50005 1.04999ZM2.5 10C2.77614 10 3 10.2239 3 10.5V12C3 12.5539 3.44565 13 3.99635 13H11.0012C11.5529 13 12 12.5528 12 12V10.5C12 10.2239 12.2239 10 12.5 10C12.7761 10 13 10.2239 13 10.5V12C13 13.1041 12.1062 14 11.0012 14H3.99635C2.89019 14 2 13.103 2 12V10.5C2 10.2239 2.22386 10 2.5 10Z" fill="#000000" />
+                </svg></div></div>` : ""
+            }
+
+
+            let currentEl = document.querySelector('.prompt-response:last-child');
+            currentEl.innerHTML = htmlContent;
+            let copyButtonHtml = `<div class="mt-1 flex justify-start gap-3 empty:hidden response-actions">
+                              <div class="text-gray-400 flex self-end lg:self-center justify-center lg:justify-start mt-0 -ml-1 h-7 visible">
+                                <span class="copy" data-state="closed" title="Copy">
+                                  <button class="flex items-center gap-1.5 rounded-md p-1 text-xs text-token-text-tertiary hover:text-token-text-primary md:invisible md:group-hover:visible md:group-[.final-completion]:visible" onclick="copyText(event,'${myData}')">
+                                    <svg width="24" height="24" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg" class="icon-md" style="border: none !important; background: none !important;">
+                                      <path fill-rule="evenodd" clip-rule="evenodd" d="M12 4C10.8954 4 10 4.89543 10 6H14C14 4.89543 13.1046 4 12 4ZM8.53513 4C9.22675 2.8044 10.5194 2 12 2C13.4806 2 14.7733 2.8044 15.4649 4H17C18.6569 4 20 5.34315 20 7V19C20 20.6569 18.6569 22 17 22H7C5.34315 22 4 20.6569 4 19V7C4 5.34315 5.34315 4 7 4H8.53513ZM8 6H7C6.44772 6 6 6.44772 6 7V19C6 19.5523 6.44772 20 7 20H17C17.5523 20 18 19.5523 18 19V7C18 6.44772 17.5523 6 17 6H16C16 7.10457 15.1046 8 14 8H10C8.89543 8 8 7.10457 8 6Z" fill="currentColor">
+                                      </path>
+                                    </svg>
+                                  </button>
+                                </span>
+                                <span class="download" data-state="closed" title="Download">
+                                  <button class="download-btn" onclick="downloadContent(event,'${myData}')">
+                                    <svg width="24" height="24" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg" class="icon-md" style="border: none !important; background: none !important;">
+                                      <path fill-rule="evenodd" clip-rule="evenodd" d="M12 2C12.5523 2 13 2.44772 13 3V13.5858L15.2929 11.2929C15.6834 10.9024 16.3166 10.9024 16.7071 11.2929C17.0976 11.6834 17.0976 12.3166 16.7071 12.7071L12.7071 16.7071C12.3166 17.0976 11.6834 17.0976 11.2929 16.7071L7.29289 12.7071C6.90237 12.3166 6.90237 11.6834 7.29289 11.2929C7.68342 10.9024 8.31658 10.9024 8.70711 11.2929L11 13.5858V3C11 2.44772 11.4477 2 12 2ZM4 20C4 19.4477 4.44772 19 5 19H19C19.5523 19 20 19.4477 20 20C20 20.5523 19.5523 21 19 21H5C4.44772 21 4 20.5523 4 20Z" fill="currentColor" stroke="none"></path>
+                                    </svg>
+                                  </button>
+                                </span>
+                              </div>
+                            </div>`;
+            currentEl.parentElement.parentElement.innerHTML += copyButtonHtml
+          })
+        }
+        if (jsonData.type == "series_parallel") {
+          $("#step-1 .prompt-body").append(
+            `<div class="parallel-prompt"></div>`)
+          $("#step-2 .prompt-body").append(
+            `<div class="parallel-prompt"></div>`)
+
+          let editIconHtml = `<span class="individualChatEdit glyphicon glyphicon-pencil ml-2" aria-hidden="true" style="margin-left: 10px;font-size: 12px;cursor: pointer;"></span>`;
+          data.history.forEach((chats, index) => {
+            let chatContent;
+
+            let copyTextJson = { "text": chats.response }
+            // let textCopied = btoa(encodeURIComponent(JSON.stringify(copyTextJson)));
+            if(chats.gpt_type_id !==1){
+
+              chatContent = `<div class="profileimage">
+                <div class="imageprofile">${profieIcon}</div>
+                <div class="profilename">You</div>
+                </div>  
+                <p class="prompt-text prompt${chats.id}">${chats.prompt} ${editIconHtml}</p>
+                <div class="response">
+                <div class="profileimage">
+                            <div class="imageprofile"> <svg fill="#000000" width="15px" height="15px" viewBox="0 0 24 24" id="chat" data-name="Line Color" xmlns="http://www.w3.org/2000/svg" class="icon line-color"><path id="primary" d="M18.81,16.23,20,21l-4.95-2.48A9.84,9.84,0,0,1,12,19c-5,0-9-3.58-9-8s4-8,9-8,9,3.58,9,8A7.49,7.49,0,0,1,18.81,16.23Z" style="fill: none; stroke: rgb(0, 0, 0); stroke-linecap: round; stroke-linejoin: round; stroke-width: 2;"></path></svg> </div>
+                            <div class="profilename">Strivenn</div>
+                </div>
+  
+                <div class="pull-right"></div><p class="prompt-response ">${chats.response}</p></div>`
+                $(`#step-1 div.prompt-body .parallel-prompt`).append(chatContent);
+                $('.seriesParallelNextBtn').removeClass('hidden')
+                $('.seriesParallelNextBtn').attr("disabled",false)
+            }else{
+              chatContent = `<div class="profileimage">
+                <div class="imageprofile">${profieIcon}</div>
+                <div class="profilename">You</div>
+                </div>  
+                <p class="prompt-text prompt${chats.id}">${chats.prompt} ${editIconHtml}</p>
+                <div class="response">
+                <div class="profileimage">
+                            <div class="imageprofile"> <svg fill="#000000" width="15px" height="15px" viewBox="0 0 24 24" id="chat" data-name="Line Color" xmlns="http://www.w3.org/2000/svg" class="icon line-color"><path id="primary" d="M18.81,16.23,20,21l-4.95-2.48A9.84,9.84,0,0,1,12,19c-5,0-9-3.58-9-8s4-8,9-8,9,3.58,9,8A7.49,7.49,0,0,1,18.81,16.23Z" style="fill: none; stroke: rgb(0, 0, 0); stroke-linecap: round; stroke-linejoin: round; stroke-width: 2;"></path></svg> </div>
+                            <div class="profilename">Strivenn</div>
+                </div>
+  
+                <div class="pull-right"></div><p class="prompt-response ">${chats.response}</p></div>`
+                $(`#step-2 div.prompt-body .parallel-prompt`).append(chatContent);
+                $('#myWizardContainer > div:nth-child(1) > div > div > div:nth-child(2) > a').attr('disabled', false);
+            }
+            // Get the protocol, hostname, and port from the window.location object
+            var protocol = window.location.protocol; // 'http:'
+            var hostname = window.location.hostname; // 'localhost' or 'example.com'
+            var port = window.location.port;         // '8080' or '' if standard port (80 for http, 443 for https)
+
+            // Construct the base URL
+            var baseUrl = protocol + "//" + hostname + (port ? ":" + port : "") + "/";
+
+            var lines = chats.response
+            let jsonString = JSON.stringify(copyTextJson)
+            let uint8Array = new TextEncoder().encode(jsonString);
+            let myData = uint8ToBase64(uint8Array);
+            // Constructing HTML elements
+            var htmlContent = '';
+            for (var i = 0; i < lines.length; i++) {
+              // Checking if line is empty
+              if (lines[i].message.trim() === '') continue;
+
+              htmlContent += `<h3>  ${lines[i].type_name}  </h3>`;
+              htmlContent += `<p>  ${lines[i].message.trim().replace(/\n/g, '<br>')}  </p>`;
+              lines[i].image_url ? htmlContent += `<br><div class="position-relative"><img src="${baseUrl + lines[i].image_path}">
+                <div class="position-absolute download-icon" onclick="downloadImage('${baseUrl + lines[i].image_path}')">
+                <svg width="20px" height="20px" viewBox="0 0 15 15" fill="none" xmlns="http://www.w3.org/2000/svg">
+                <path fill-rule="evenodd" clip-rule="evenodd" d="M7.50005 1.04999C7.74858 1.04999 7.95005 1.25146 7.95005 1.49999V8.41359L10.1819 6.18179C10.3576 6.00605 10.6425 6.00605 10.8182 6.18179C10.994 6.35753 10.994 6.64245 10.8182 6.81819L7.81825 9.81819C7.64251 9.99392 7.35759 9.99392 7.18185 9.81819L4.18185 6.81819C4.00611 6.64245 4.00611 6.35753 4.18185 6.18179C4.35759 6.00605 4.64251 6.00605 4.81825 6.18179L7.05005 8.41359V1.49999C7.05005 1.25146 7.25152 1.04999 7.50005 1.04999ZM2.5 10C2.77614 10 3 10.2239 3 10.5V12C3 12.5539 3.44565 13 3.99635 13H11.0012C11.5529 13 12 12.5528 12 12V10.5C12 10.2239 12.2239 10 12.5 10C12.7761 10 13 10.2239 13 10.5V12C13 13.1041 12.1062 14 11.0012 14H3.99635C2.89019 14 2 13.103 2 12V10.5C2 10.2239 2.22386 10 2.5 10Z" fill="#000000" />
+                </svg></div></div>` : ""
+            }
+
+
+            let currentEl = document.querySelector('.prompt-response:last-child');
+            currentEl.innerHTML = htmlContent;
+            let copyButtonHtml = `<div class="mt-1 flex justify-start gap-3 empty:hidden response-actions">
+                              <div class="text-gray-400 flex self-end lg:self-center justify-center lg:justify-start mt-0 -ml-1 h-7 visible">
+                                <span class="copy" data-state="closed" title="Copy">
+                                  <button class="flex items-center gap-1.5 rounded-md p-1 text-xs text-token-text-tertiary hover:text-token-text-primary md:invisible md:group-hover:visible md:group-[.final-completion]:visible" onclick="copyText(event,'${myData}')">
+                                    <svg width="24" height="24" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg" class="icon-md" style="border: none !important; background: none !important;">
+                                      <path fill-rule="evenodd" clip-rule="evenodd" d="M12 4C10.8954 4 10 4.89543 10 6H14C14 4.89543 13.1046 4 12 4ZM8.53513 4C9.22675 2.8044 10.5194 2 12 2C13.4806 2 14.7733 2.8044 15.4649 4H17C18.6569 4 20 5.34315 20 7V19C20 20.6569 18.6569 22 17 22H7C5.34315 22 4 20.6569 4 19V7C4 5.34315 5.34315 4 7 4H8.53513ZM8 6H7C6.44772 6 6 6.44772 6 7V19C6 19.5523 6.44772 20 7 20H17C17.5523 20 18 19.5523 18 19V7C18 6.44772 17.5523 6 17 6H16C16 7.10457 15.1046 8 14 8H10C8.89543 8 8 7.10457 8 6Z" fill="currentColor">
+                                      </path>
+                                    </svg>
+                                  </button>
+                                </span>
+
+                                <span class="download" data-state="closed" title="Download">
+                                  <button class="download-btn" onclick="downloadContent(event,'${myData}')">
+                                    <svg width="24" height="24" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg" class="icon-md" style="border: none !important; background: none !important;">
+                                      <path fill-rule="evenodd" clip-rule="evenodd" d="M12 2C12.5523 2 13 2.44772 13 3V13.5858L15.2929 11.2929C15.6834 10.9024 16.3166 10.9024 16.7071 11.2929C17.0976 11.6834 17.0976 12.3166 16.7071 12.7071L12.7071 16.7071C12.3166 17.0976 11.6834 17.0976 11.2929 16.7071L7.29289 12.7071C6.90237 12.3166 6.90237 11.6834 7.29289 11.2929C7.68342 10.9024 8.31658 10.9024 8.70711 11.2929L11 13.5858V3C11 2.44772 11.4477 2 12 2ZM4 20C4 19.4477 4.44772 19 5 19H19C19.5523 19 20 19.4477 20 20C20 20.5523 19.5523 21 19 21H5C4.44772 21 4 20.5523 4 20Z" fill="currentColor" stroke="none"></path>
+                                    </svg>
+                                  </button>
+                                </span>
+                              </div>
+                            </div>`;
+            currentEl.parentElement.parentElement.innerHTML += copyButtonHtml
+          })
+        }
+
+      },
+      error: function (error) {
+        console.log(error);
+      },
+    });
+
+  }
+
+  // Function to convert Uint8Array to base64
+  function uint8ToBase64(uint8Array) {
+    let binary = '';
+    uint8Array.forEach((byte) => {
+      binary += String.fromCharCode(byte);
+    });
+    return btoa(binary);
+  }
+
+  // Function to convert base64 to Uint8Array
+  function base64ToUint8(base64String) {
+    let binary = atob(base64String);
+    let uint8Array = new Uint8Array(binary.length);
+    for (let i = 0; i < binary.length; i++) {
+      uint8Array[i] = binary.charCodeAt(i);
+    }
+    return uint8Array;
+  }
+
+  function copyText(event, text) {
+    // console.log("copy text",text)
+    let decodedUint8Array = base64ToUint8(text);
+    let decodedString = new TextDecoder().decode(decodedUint8Array);
+    let copyText = JSON.parse(decodedString)
+    // Changes to copy the response for both array and string
+    navigator.clipboard.writeText(Array.isArray(copyText.text) ? copyText.text.map(e => `${e.type ? e.type : e.type_name}\n${e.message}`).join("\n") : copyText.text)
+      .then(() => {
+        // Create a toast message
+        const toast = document.createElement('div');
+        toast.textContent = 'Copied';
+        toast.classList.add('toast-message');
+        const elementRect = event.target.getBoundingClientRect();
+        toast.style.position = 'absolute';
+        toast.style.top = `${elementRect.top - toast.offsetHeight - 50}px`;
+        toast.style.left = `${elementRect.left - 10}px`;
+        toast.style.width = `80px`;
+        toast.style.textAlign = `center`;
+        document.body.appendChild(toast);
+        setTimeout(() => {
+          toast.remove();
+        }, 1000);
+      })
+      .catch(err => {
+        console.error("Failed to copy text:", err);
+      });
+  }
+
+  function nextPromptFromResponse(event, text) {
+    //   NextPrompt();
+    let decodedUint8Array = base64ToUint8(text);
+    let decodedString = new TextDecoder().decode(decodedUint8Array);
+    let copyText = JSON.parse(decodedString)
+    let currentText = $('.inputContainer').find('textarea').val()
+
+    
+    var previousResposne = copyText.text[0].message ? copyText.text[0].message : copyText.text
+    previousResposne = previousResposne?.trim().replace(/<br>/g, "\n")
+
+    var curStep = $(".setup-content:visible"),
+      curStepBtn = curStep.attr("id"),
+      nextStepWizard = $(
+        'div.setup-panel div a[href="#' + curStepBtn + '"]'
+      )
+        .parent()
+        .next()
+        .children("a"),
+      curInputs = curStep.find("input[type='text'],input[type='url']"),
+      isValid = true;
+    $(".form-group").removeClass("has-error");
+    for (var i = 0; i < curInputs.length; i++) {
+      if (!curInputs[i].validity.valid) {
+        isValid = false;
+        $(curInputs[i]).closest(".form-group").addClass("has-error");
+      }
+    }
+    if (isValid) nextStepWizard.removeAttr("disabled").trigger("click");
+    (nextStepWizard = $('div.setup-panel div a[href="#' + curStepBtn + '"]')
+      .parent()
+      .next()
+      .children("a")),
+      "nextStepWizard",
+      $(`div#${curStepBtn}`)
+        .next()
+        .find("textarea")
+        .val(previousResposne ? previousResposne : "")
+        
+        if(jsonData.type == "series_parallel"){
+          if(event.target.closest('.seriesParallelNextBtn')){
+            $("#step-1").hide()      
+            $("#step-2").show()      
+          }
+        }
+        stepCircleChange();
+  }
+
+
+  function NextPrompt() {
+    // let nextGptId = NextEle
+
+    let currentEleId = $(
+      $(".stepwizard .stepwizard-row a.btn-success").attr("href")
+    );
+    console.log("testingggg");
+    let id = currentEleId.data().set.id;
+    let isInputField = id == 4 || id == 5 || id == 6 ? false : true;
+    let getPrevValue = currentEleId.prev().hasClass("panel-primary")
+      ? currentEleId.prev().find(".prompt-response:last").text()
+      : null;
+
+    let lastStep = $('.stepwizard-row .stepwizard-step:last');
+    let isLastButtonSuccess = lastStep.find('a.btn-success').length > 0;
+    $('.next').css("display", isLastButtonSuccess ? "inline-block" : "none");
+  }
+
+  function newPrompt() {
+    console.log("jsonData", jsonData)
+    if (xhr) {
+      xhr.abort();
+    }
+    window.location.reload();
+    //$('.selected').removeClass('selected')
+    //$("#myWizardContainer a:first").trigger("click");
+//
+    //if (jsonData.type == "parallel") {
+    //  $(".prompt-body .parallel-prompt").html("");
+    //}
+    //if (jsonData.type == null) {
+    //  $(".prompt-body").html("");
+    //}
+    //if (jsonData.type == "series_parallel") {
+    //  $(".prompt-body .parallel-prompt").html("");
+    //  $(`a[href="#step-2"]`).removeClass("stepwizard_circle").removeClass('btn-success');
+    //}
+//
+    //$("textarea").val("");
+    //$('.nextBtn').attr("disabled", true)
+    //$('.nextBtn').addClass("hidden")
+    //$('.stepwizard-step a').each(function () {
+    //  // Check if the <a> tag does not have a specific class, e.g., 'my-class'
+    //  if (!$(this).hasClass('btn-success')) {
+    //    // Disable the <a> tag if it does not have the specific class
+    //    $(this).attr('disabled', true); // Set the 'disabled' attribute
+    //  }
+    //});
+//
+    //chat_id = ""
+    //is_first = true
+    //$("#myWizardContainer a:first").removeClass('btn-success').addClass('stepwizard_circle')
+  }
+
+  function searchResults(event, gptId, gptType) {
+    // console.log("flowType",flowType);
+    let editIconHtml = `<span class="individualChatEdit glyphicon glyphicon-pencil ml-2" aria-hidden="true" style="margin-left: 10px;font-size: 12px;cursor: pointer;"></span>`;
+    if (event.shiftKey) { return }
+    if ((event.key === "Enter" && !event.shiftKey) || event.type === "click") {
+      $(`#input${gptId} .send-button`).attr("disabled", true);
+      let inputText = document.querySelector(`#inputText${gptId}`).value;
+
+      if (inputText.trim() !== "") {
+        $(`#inputText${gptId}`)
+          .parent()
+          .parent()
+          .parent()
+          .find(".prompt-body")
+          .append(`<div class="profileimage">
+                                <div class="imageprofile">${profieIcon}</div>
+                                <div class="profilename">You</div>
+                            </div>
+
+              <p class="prompt-text prompt${gptId}">${inputText.replace(/\n/g, "<br>")} ${editIconHtml}</p>
+              <div class="response">
+                <div class="profileimage">
+                                <div class="imageprofile"> <svg fill="#000000" width="15px" height="15px" viewBox="0 0 24 24" id="chat" data-name="Line Color" xmlns="http://www.w3.org/2000/svg" class="icon line-color"><path id="primary" d="M18.81,16.23,20,21l-4.95-2.48A9.84,9.84,0,0,1,12,19c-5,0-9-3.58-9-8s4-8,9-8,9,3.58,9,8A7.49,7.49,0,0,1,18.81,16.23Z" style="fill: none; stroke: rgb(0, 0, 0); stroke-linecap: round; stroke-linejoin: round; stroke-width: 2;"></path></svg> </div>
+                                <div class="profilename">Strivenn</div>
+                </div>
+                <div class="loading-dots">
+                  <div class="loading-dots--dot"></div>
+                  <div class="loading-dots--dot"></div>
+                  <div class="loading-dots--dot"></div>
+                </div>
+
+
+                <p class="prompt-response">
+
+
+                  </p>
+                </div>
+
+
+
+              `);
+
+        const searchResultsContainer = document.querySelector(
+          `#searchResults${gptId}`
+        );
+        $(`#inputText${gptId}`).val("").attr("placeholder", "Type here...").css("height", "70px");
+        is_first = chat_id ? false : true;
+        console.log(is_first);
+        // Replace the following line with your actual logic to fetch search results
+        var csrfToken = $("meta[name=csrf-token]").attr("content");
+        var data = {
+          prompt: inputText,
+          gpt_id: gptId,
+          workflow_id: jsonData.id,
+          is_first: is_first,
+        }; // Use the correct variable for the prompt
+        data["chat_id"] = chat_id ? chat_id : null;
+        console.log(inputText);
+        xhr = $.ajax({
+          url: "/workflows/search",
+          method: "POST",
+          contentType: "application/json",
+          data: JSON.stringify(data),
+          headers: {
+            "X-CSRFToken": csrfToken,
+          },
+          success: function (data) {
+            $(`#inputText${gptId}`).parent().parent().parent().parent().parent().find('.stepwizard .stepwizard_circle').removeClass('stepwizard_circle')
+            let currentStepId = $(`#inputText${gptId}`).parent().parent().parent().parent().attr('id')
+            
+            $(`#inputText${gptId} .send-button`).attr("disabled", false);
+            $(".loading-dots").remove();
+            $(".send-button").attr("disabled", false);
+            chat_id = data.chat_id;
+            console.log("data", data);
+            let copyTextJson = { "text": data.message }
+            let jsonString = JSON.stringify(copyTextJson)
+            let uint8Array = new TextEncoder().encode(jsonString);
+            let textToCopy = uint8ToBase64(uint8Array);
+            $(`.prompt${gptId}`).data("chat_id", chat_id);
+            $("#myWizardContainer a.btn-success")
+              .parent()
+              .next()
+              .find("a")
+              .attr("disabled", false);
+            let imageResponse =
+              data.image_path ? `<br>
+                <div class="position-relative"><img src="${baseUrl + data.image_path}">
+                  <div class="position-absolute download-icon" onclick="downloadImage('${baseUrl + data.image_path}')">
+                  <svg width="20px" height="20px" viewBox="0 0 15 15" fill="none" xmlns="http://www.w3.org/2000/svg">
+                  <path fill-rule="evenodd" clip-rule="evenodd" d="M7.50005 1.04999C7.74858 1.04999 7.95005 1.25146 7.95005 1.49999V8.41359L10.1819 6.18179C10.3576 6.00605 10.6425 6.00605 10.8182 6.18179C10.994 6.35753 10.994 6.64245 10.8182 6.81819L7.81825 9.81819C7.64251 9.99392 7.35759 9.99392 7.18185 9.81819L4.18185 6.81819C4.00611 6.64245 4.00611 6.35753 4.18185 6.18179C4.35759 6.00605 4.64251 6.00605 4.81825 6.18179L7.05005 8.41359V1.49999C7.05005 1.25146 7.25152 1.04999 7.50005 1.04999ZM2.5 10C2.77614 10 3 10.2239 3 10.5V12C3 12.5539 3.44565 13 3.99635 13H11.0012C11.5529 13 12 12.5528 12 12V10.5C12 10.2239 12.2239 10 12.5 10C12.7761 10 13 10.2239 13 10.5V12C13 13.1041 12.1062 14 11.0012 14H3.99635C2.89019 14 2 13.103 2 12V10.5C2 10.2239 2.22386 10 2.5 10Z" fill="#000000"/>
+                  </svg></div></div>` : "";
+            $(`#inputText${gptId}`)
+              .parent()
+              .next()
+              .find(".nextBtn")
+              .attr("disabled", false);
+            $(`#inputText${gptId}`)
+              .parent()
+              .next()
+              .find(".nextBtn")
+              .removeClass("hidden");
+            // Resolve the promise with the data received from the server
+            // resolve(data);
+            $(`#inputText${gptId}`)
+              .parent()
+              .parent()
+              .parent()
+              .find(".prompt-body .prompt-response:last")
+              .html(
+                `${imageResponse} ${data.message.replace(/\n/g, "<br>")}`
+              );
+            scrollAnimation("#" + gptId + " .prompt-body")
+            data.chat_name ? $("#historyList .today").length ? $('#prompt-history ul li:first').before(`<li data-workflow="8" class="list-group-item text-align-center" onclick="viewHistory(event.target,${data.chat_id},${jsonData.id})">${data.chat_name}</li>`) : $("#historyList").append(`<h4 class="today">Today</h4><li data-workflow="8" class="list-group-item text-align-center" onclick="viewHistory(event.target,${data.chat_id},${jsonData.id})">${data.chat_name}</li>`) : "";
+            $(`.response`).last().parent().append(`
+              <div class="mt-1 flex justify-start gap-3 empty:hidden response-actions">
+                <div class="text-gray-400 flex self-end lg:self-center justify-center lg:justify-start mt-0 -ml-1 h-7 visible">
+                  <span class="copy" data-state="closed" title="Copy">
+                    <button class="flex items-center gap-1.5 rounded-md p-1 text-xs text-token-text-tertiary hover:text-token-text-primary md:invisible md:group-hover:visible md:group-[.final-completion]:visible" onclick="copyText(event,'${textToCopy}')">
+                      <svg width="24" height="24" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg" class="icon-md" style="border: none !important; background: none !important;">
+                        <path fill-rule="evenodd" clip-rule="evenodd" d="M12 4C10.8954 4 10 4.89543 10 6H14C14 4.89543 13.1046 4 12 4ZM8.53513 4C9.22675 2.8044 10.5194 2 12 2C13.4806 2 14.7733 2.8044 15.4649 4H17C18.6569 4 20 5.34315 20 7V19C20 20.6569 18.6569 22 17 22H7C5.34315 22 4 20.6569 4 19V7C4 5.34315 5.34315 4 7 4H8.53513ZM8 6H7C6.44772 6 6 6.44772 6 7V19C6 19.5523 6.44772 20 7 20H17C17.5523 20 18 19.5523 18 19V7C18 6.44772 17.5523 6 17 6H16C16 7.10457 15.1046 8 14 8H10C8.89543 8 8 7.10457 8 6Z" fill="currentColor"></path>
+                      </svg>
+                    </button>
+                  </span>
+
+                  <span class="download" data-state="closed" title="Download">
+                    <button class="download-btn" onclick="downloadContent(event,'${textToCopy}')">
+                      <svg width="24" height="24" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg" class="icon-md" style="border: none !important; background: none !important;">
+                        <path fill-rule="evenodd" clip-rule="evenodd" d="M12 2C12.5523 2 13 2.44772 13 3V13.5858L15.2929 11.2929C15.6834 10.9024 16.3166 10.9024 16.7071 11.2929C17.0976 11.6834 17.0976 12.3166 16.7071 12.7071L12.7071 16.7071C12.3166 17.0976 11.6834 17.0976 11.2929 16.7071L7.29289 12.7071C6.90237 12.3166 6.90237 11.6834 7.29289 11.2929C7.68342 10.9024 8.31658 10.9024 8.70711 11.2929L11 13.5858V3C11 2.44772 11.4477 2 12 2ZM4 20C4 19.4477 4.44772 19 5 19H19C19.5523 19 20 19.4477 20 20C20 20.5523 19.5523 21 19 21H5C4.44772 21 4 20.5523 4 20Z" fill="currentColor" stroke="none"></path>
+                      </svg>
+                    </button>
+                  </span>
+
+
+                  <span class="next" data-state="closed" title="Next">
+                    <button class="nextBtn seriesParallelNextBtn p-1 rounded-md text-token-text-tertiary hover:text-token-text-primary md:invisible md:group-hover:visible md:group-[.final-completion]:visible" onclick="nextPromptFromResponse(event,'${textToCopy}')">
+                      <div class="flex items-center gap-1.5 text-xs">
+                        <svg fill="#0e7c7b" width="24px" height="24px" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg" style="border: none !important; background: none !important;">
+                          <path fill-rule="evenodd" d="M4.10514201,11.8070619 L2.74013818,2.2520351 L22.236068,12 L2.74013818,21.7479649 L4.10514201,12.1929381 L4.87689437,12 L4.10514201,11.8070619 Z M5.25986182,5.7479649 L5.89485799,10.1929381 L13.1231056,12 L5.89485799,13.8070619 L5.25986182,18.2520351 L17.763932,12 L5.25986182,5.7479649 Z"/>
+                        </svg>
+                      </div>
+                    </button>
+                  </span>
+                </div>
+              </div>
+            `);
+            let lastStep = $('.stepwizard-row .stepwizard-step:last');
+            let isLastButtonSuccess = lastStep.find('a.btn-success').length > 0;
+            $('.next').css("display", isLastButtonSuccess ? "none" : "inline-block");
+            console.log("currentStepId", currentStepId)
+            $(`a[href="#${currentStepId}"]`).addClass('btn-success')
+          },
+          error: function (error) {
+            // Handle errors here
+            $(`#inputText${gptId}`).next().attr("disabled", false);
+            $(`.prompt${gptId}`).find('.prompt-response').addClass('text-danger')
+            $(`.prompt${gptId}`).find('.prompt-response').text("An unexpected error occurred. Please try again later.")
+            $(".loading-dots").remove();
+            // scrollAnimation(".prompt-body:last")
+            // Reject the promise with the error
+            // resolve({ error: 'Failed to fetch data' });
+          },
+        });
+      }
+
+      // Display search results (replace this logic with how you want to display the results)
+    }
+  }
+
+  function downloadImage(imageUrl) {
+    // Create an anchor element
+    var downloadLink = $('<a>');
+    // Set the href attribute to the image source
+    downloadLink.attr('href', imageUrl);
+    // Set the download attribute to specify the filename
+    downloadLink.attr('download', 'image.jpg');
+    // Append the anchor element to the body
+    $('body').append(downloadLink);
+    // Trigger a click on the anchor element to start the download
+    downloadLink[0].click();
+    // Remove the anchor element
+    downloadLink.remove();
+  }
+
+  // Mock function to simulate fetching search results asynchronously
+  async function fetchSearchResults(gptId, inputText) {
+    return new Promise((resolve) => { });
+  }
+
+  function showStep(step) {
+    const steps = document.querySelectorAll(".wizard-step");
+    steps.forEach((div, index) => {
+      div.style.display = step === index ? "block" : "none";
+    });
+
+    updateButtonVisibility(step);
+  }
+
+  function updateButtonVisibility(step) {
+    console.log("test");
+    const previousButton = document.querySelector(".btn.btn-default");
+    const nextButton = document.querySelectorAll(".btn.btn-primary")[step];
+    const submitButton = document.querySelector(".btn.btn-success");
+
+    previousButton.style.display = step === 0 ? "none" : "inline-block";
+    nextButton.style.display =
+      step === gptIds.length - 1 ? "none" : "inline-block";
+    submitButton.style.display =
+      step === gptIds.length - 1 ? "inline-block" : "none";
+  }
+
+  function nextStep() {
+    if (currentStep < gptIds.length - 1) {
+      currentStep++;
+      showStep(currentStep);
+    }
+  }
+
+  function previousStep() {
+    if (currentStep > 0) {
+      currentStep--;
+      showStep(currentStep);
+    }
+  }
+
+  function submitWizard() {
+    // Handle the final submission
+    alert("Wizard completed!");
+  }
+
+  // Show the initial step
+
+  $(document).ready(function () {
+
+    $('.seriesParallelNextBtn').click((e)=>{
+      $('#step-1').hide()
+      $('#step-2').show()
+    })
+    $('.seriesParallelPreviousBtn').click((e)=>{
+      $('#step-2').hide()
+      $('#step-1').show()
+    })
+
+    function adjustTextareaHeight(textarea) {
+      if ($(textarea).val().trim() == "") {
+        $(textarea).attr("placeholder", "Type here...").css("height", "70px")
+
+        return;
+      }
+
+      textarea.style.height = 'auto'; // Reset height to auto to get the correct scrollHeight
+      textarea.style.height = Math.min(textarea.scrollHeight, 400) + 'px'; // Set new height
+    }
+    var textareas = document.querySelectorAll('.inputText');
+    // Loop through each textarea and add the event listener
+    textareas.forEach(function (textarea) {
+      textarea.addEventListener('input', function () {
+        adjustTextareaHeight(this);
+      });
+    });
+
+
+
+    var navListItems = $("div.setup-panel div a"),
+      allWells = $(".setup-content"),
+      allNextBtn = $(".nextBtn");
+    allPrevBtn = $(".previousBtn")
+    if (jsonData.type == null) {
+      allWells.hide();
+    }
+
+    navListItems.click(function (e) {
+      e.preventDefault();
+
+      //NextPrompt();
+      var $target = $($(this).attr("href")),
+        $item = $(this);
+
+      if (!$item.hasClass("disabled")) {
+        navListItems.removeClass("btn-success").addClass("btn-default");
+        $item.addClass("btn-success");
+        if (jsonData.type == null) {
+          allWells.hide();
+        }
+
+        $target.show();
+        $target.find("input:eq(0)").focus();
+      }
+      $("#myWizardContainer a:first").removeClass('btn-success').addClass('stepwizard_circle')
+      stepCircleChange()
+    });
+
+    allPrevBtn.click(function () {
+      var curStep = $(this).closest(".setup-content"),
+        curStepBtn = curStep.attr("id"),
+        prevStepWizard = $('div.setup-panel div a[href="#' + curStepBtn + '"]')
+          .parent()
+          .prev()
+          .children("a"),
+        curInputs = curStep.find("input[type='text'],input[type='url']");
+
+      $(".form-group").removeClass("has-error");
+      for (var i = 0; i < curInputs.length; i++) {
+        if (!curInputs[i].validity.valid) {
+          $(curInputs[i]).closest(".form-group").addClass("has-error");
+        }
+      }
+
+      // Navigate to the previous step
+      prevStepWizard.removeAttr("disabled").trigger("click");
+
+      console.log("prevStepWizard", prevStepWizard);
+      stepCircleChange();
+    });
+
+
+    allNextBtn.click(function () {
+      //   NextPrompt();
+      let currentText = $(this).closest('.inputContainer').find('textarea').val()
+      if (currentText.trim() === "") {
+
+        var previousResposne = $(this)
+          .parent()
+          .parent()
+          .siblings(".prompt-body")
+          .find("p.prompt-response")
+          .html();
+        previousResposne = previousResposne?.trim().replace(/<br>/g, "\n")
+
+        var curStep = $(this).closest(".setup-content"),
+          curStepBtn = curStep.attr("id"),
+          nextStepWizard = $(
+            'div.setup-panel div a[href="#' + curStepBtn + '"]'
+          )
+            .parent()
+            .next()
+            .children("a"),
+          curInputs = curStep.find("input[type='text'],input[type='url']"),
+          isValid = true;
+        $(".form-group").removeClass("has-error");
+        for (var i = 0; i < curInputs.length; i++) {
+          if (!curInputs[i].validity.valid) {
+            isValid = false;
+            $(curInputs[i]).closest(".form-group").addClass("has-error");
+          }
+        }
+
+        if (isValid) nextStepWizard.removeAttr("disabled").trigger("click");
+        
+
+      } else {
+        var curStep = $(this).closest(".setup-content"),
+          curStepBtn = curStep.attr("id"),
+          nextStepWizard = $(
+            'div.setup-panel div a[href="#' + curStepBtn + '"]'
+          )
+            .parent()
+            .next()
+            .children("a"),
+          curInputs = curStep.find("input[type='text'],input[type='url']"),
+          isValid = true;
+        $(".form-group").removeClass("has-error");
+        for (let i = 0; i < curInputs.length; i++) {
+          if (!curInputs[i].validity.valid) {
+            isValid = false;
+            $(curInputs[i]).closest(".form-group").addClass("has-error");
+          }
+        }
+     
+        console.log("currentText", currentText);
+        if (isValid) nextStepWizard.removeAttr("disabled").trigger("click");
+      }
+      stepCircleChange();
+    });
+
+    $("div.setup-panel div a.btn-success").trigger("click");
+  });
+
+  //   tooltip
+  $(function () {
+    $('[data-toggle="tooltip"]').tooltip()
+  })
+  $(document).ready(function () {
+    //     // CkEditor Initialize
+    //     CKEDITOR.editorConfig = function (config) {
+    //     config.language = 'es';
+    //     config.uiColor = '#F7B42C';
+    //     config.height = 300;
+    //     config.toolbarCanCollapse = true;
+
+    // };
+    // CKEDITOR.replace('inputText1');
+
+
+    let headings = []
+    let loading = false; // Initialize the loading
+    let pageno = 1; // Initialize the page number
+    loadHistory(pageno, headings);
+
+    $("#prompt-history").scroll(function () {
+      const scrollHeight = $("#prompt-history")[0].scrollHeight;
+      const scrollPos = $("#prompt-history").scrollTop() + $("#prompt-history").height();
+      const isBottom = Math.ceil(scrollPos) === scrollHeight || Math.ceil(scrollPos) >= scrollHeight - 10;
+      // Check if the user has scrolled to the bottom
+      if (isBottom && !loading) {
+        loading = true;
+        setTimeout(function () {
+          pageno += 1;
+          loadHistory(pageno, headings);
+          loading = false;
+        }, 100);
+      }
+    });
+  });
+  // Function to subtract days from a date
+  function subtractDays(date, days) {
+    var result = new Date(date);
+    result.setDate(date.getDate() - days);
+    return result.toISOString().split('T')[0];
+  }
+
+  function nextPrevSeriesParallel(event) {
+    if(event == "next"){
+      $('#step-1').hide()
+      $('#step-2').show()
+    }else if(event == "prev"){
+      $('#step-1').show()
+      $('#step-2').hide()
+    }
+    stepCircleChange();
+  }
+
+  function loadHistory(page, headings) {
+    let loading = true;
+    let url = new URL(window.location.href);
+    let workflow_id = url.pathname.split('/').pop();
+    let responseList = $('#historyList');
+    let today = new Date();
+    let todayDate = today.toISOString().split('T')[0];
+
+    // Simulate an AJAX request to fetch more history data
+    $.ajax({
+      url: `/workflows/gpt_history_list/${parseInt(workflow_id)}?page=${page}`,
+      method: 'GET',
+      success: function (response) {
+        let fragment = document.createDocumentFragment();
+
+        $.each(response.data, function (index, item) {
+          let createdDate = item.created_at.split('T')[0];
+
+          if (createdDate === todayDate && headings.indexOf('Today') === -1) {
+            fragment.appendChild($('<h4>').addClass('today').text(' Today ')[0]);
+            headings.push('Today');
+          } else if (createdDate === subtractDays(today, 1) && headings.indexOf('Yesterday') === -1) {
+            fragment.appendChild($('<h4>').text(' Yesterday ')[0]);
+            headings.push('Yesterday');
+          } else if (createdDate >= subtractDays(today, 7) && createdDate < subtractDays(today, 1) && headings.indexOf('Last Week') === -1) {
+            fragment.appendChild($('<h4>').text(' Last Week ')[0]);
+            headings.push('Last Week');
+          } else if (createdDate <= subtractDays(today, 7) && headings.indexOf('History') === -1) {
+            fragment.appendChild($('<h4>').text(' History ')[0]);
+            headings.push('History');
+          }
+
+          let text = item.name;
+          let listItem = $('<li>')
+            .attr('data-workflow', item.workflow_id)
+            .addClass('list-group-item text-align-center')
+            .text(text)
+            .on('click', (event) => viewHistory(event.target, item.id, item.workflow_id));
+
+          fragment.appendChild(listItem[0]);
+        });
+
+        responseList.append(fragment);
+      },
+      complete: function () {
+        loading = false; // Reset loading flag after the AJAX request is complete
+      },
+      error: function (xhr, status, error) {
+        console.log("Error loading history");
+      }
+    });
+  }
+  
+  function downloadContent(event, text) {
+        const decodedUint8Array = base64ToUint8(text);
+        const decodedString = new TextDecoder().decode(decodedUint8Array);
+        const content = JSON.parse(decodedString);
+        // Split content into paragraphs based on newlines
+        const paragraphs = content.text.split('\n').filter(paragraph => paragraph.trim() !== "");
+        const { Document, Packer, Paragraph, TextRun } = docx;
+        // Create an array of Paragraph objects for the document
+        const docParagraphs = paragraphs.map(paragraph => {
+            return new Paragraph({
+                children: [new TextRun(paragraph)]
+            });
+        });
+
+        const doc = new Document({
+            sections: [
+                {
+                    properties: {},
+                    children: docParagraphs,
+                },
+            ],
+        });
+
+        Packer.toBlob(doc).then(blob => {
+            const url = URL.createObjectURL(blob);
+            const a = document.createElement('a');
+            a.href = url;
+            a.download = 'content.docx'; // Specify the filename
+            document.body.appendChild(a);
+            a.click();
+            document.body.removeChild(a);
+            URL.revokeObjectURL(url);
+        });
+    }
+
+  function adjustHeight(element) {
+    var textarea = element;
+
+    var scrollHeight = textarea.scrollHeight;
+
+    // Set a maximum height (e.g., 100 pixels)
+    var maxHeight = 400;
+    var minHeight = 40;
+    // Adjust the height based on content and max height
+    textarea.style.height = Math.min(maxHeight, Math.max(minHeight, scrollHeight)) + "px";
+  }
+</script>
+
+{% extends 'appbuilder/base.html' %} {% block head_css %} {{ super() }}
+<link rel="stylesheet" type="text/css" href="{{ url_for('static', filename='main/css/prompt.css') }}" />
+<link rel="stylesheet" type="text/css" href="{{ url_for('static', filename='main/css/theme.css') }}" />
+{% endblock %}

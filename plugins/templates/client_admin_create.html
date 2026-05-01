@@ -1,0 +1,146 @@
+<script src="{{url_for('static',filename='main/js/jquery.js')}}"></script>
+<script src="{{url_for('static',filename='main/js/miscellaneous.js')}}"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/toastr.js/latest/toastr.min.js"></script>
+<link href="https://fonts.googleapis.com/css2?family=Oxygen:wght@300;400;700&display=swap" rel="stylesheet">
+
+<meta name="csrf-token" content="{{ csrf_token() }}">
+<div class="toast"></div>
+
+<div class="panel panel-primary ">
+<div class="panel-heading">
+    {% if clientadmin and clientadmin.id%}
+    <h2>Edit Client Admin</h2>
+    {% else %}
+    <h2>Add Client Admin</h2>
+    {% endif %}
+</div>
+<div class="panel-body">
+    <form action="{{ url_for('ClientAdmin.add_client') }}" method="post" id="client-admin-form">
+        <div class="table-responsive">
+            <table class="table table-bordered">
+                <tbody>
+                    <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                    <input type="hidden" id="clientadmin_id" name="clientadmin_id" value="{{ clientadmin.id if clientadmin and clientadmin.id else '' }}">
+    
+                    <!-- ... other form fields ... -->
+    
+                    <tr>
+                        <td class="col-lg-2">
+                            <label for="name">First Name <strong style="color: red">*</strong></label>
+                        </td>
+                        <td>
+                            <input class="form-control" type="text" id="firstname" placeholder="First Name" name="firstname" required value="{{ clientadmin.first_name if clientadmin else '' }}">
+                        </td>
+                    </tr>
+                    <tr>
+                        <td class="col-lg-2">
+                            <label for="name">Last Name <strong style="color: red">*</strong></label>
+                        </td>
+                        <td>
+                            <input class="form-control" type="text" id="lastname" placeholder="Last Name" name="lastname" required value="{{ clientadmin.last_name if clientadmin else '' }}">
+                        </td>
+                    </tr>
+                    
+                    <tr>
+                        <td class="col-lg-2">
+                            <label for="name">User Name <strong style="color: red">*</strong></label>
+                        </td>
+                        <td>
+                            <input class="form-control" type="text" id="username" name="username" placeholder="User Name" required value="{{ clientadmin.username if clientadmin else '' }}">
+                        </td>
+                    </tr>
+                    <tr>
+                        <td class="col-lg-2">
+                            <label for="name">Is Active? </label>
+                        </td>
+                        <td class="checkbox-container">
+                            <input class="form-check-input" type="checkbox" id="active" placeholder="Is Active" value="on" name="active" {{ 'checked' if clientadmin and clientadmin.active else '' }}>
+                        </td>
+                    </tr>
+                    <tr>
+                        <td class="col-lg-2">
+                            <label for="name">Email <strong style="color: red">*</strong></label>
+                        </td>
+                        <td>
+                            <input class="form-control" type="email" id="email" name="email" placeholder="Email" required value="{{ clientadmin.email if clientadmin else '' }}">
+                        </td>
+                    </tr>
+                    {% if not clientadmin or not clientadmin.id %}
+                    <tr>
+                        <td class="col-lg-2">
+                            <label for="name">Password <strong style="color: red">*</strong></label>
+                        </td>
+                        <td>
+                            <input class="form-control" type="password" id="password" placeholder="Password" name="password" required value="{{ clientadmin.password if clientadmin else '' }}">
+                        </td>
+                    </tr>
+                    <tr>
+                        <td class="col-lg-2">
+                            <label for="name">Confirm Password <strong style="color: red">*</strong></label>
+                        </td>
+                        <td>
+                            <input class="form-control" type="password" id="confirmpassword" placeholder="Confirm Password" name="confirmpassword" value="{{ clientadmin.password if clientadmin else '' }}">
+                            <div id="password-error" class="text-danger" style="display: none;">Passwords do not match.</div>
+                        </td>
+                    </tr>
+                    {% else %}
+                    <tr id="password-field" style="display: none;">
+                        <td class="col-lg-2">
+                            <label for="name">Password</label>
+                        </td>
+                        <td>
+                            <input class="form-control" type="password" id="password" placeholder="Leave blank to keep current password" name="password">
+                        </td>
+                    </tr>
+                    <tr id="confirmpassword-field" style="display: none;">
+                        <td class="col-lg-2">
+                            <label for="name">Confirm Password</label>
+                        </td>
+                        <td>
+                            <input class="form-control" type="password" id="confirmpassword" placeholder="Leave blank to keep current password" name="confirmpassword">
+                            <div id="password-error" class="text-danger" style="display: none;">Passwords do not match.</div>
+                        </td>
+                    </tr>
+                    {% endif %}
+                    <tr>
+                        <td class="col-lg-2">
+                            <label for="name">User Limit <strong style="color: red">*</strong></label>
+                        </td>
+                        <td>
+                            <input class="form-control" type="number" id="userlimit" name="userlimit" placeholder="User Limit" required value="{{ clientadmin.user_limit if clientadmin else '' }}">
+                        </td>
+                    </tr>
+                    <tr>
+                        <td>
+                            {% if clientadmin and clientadmin.id %}
+                            <button type="button" id="edit-clientadmin" class="btn btn-primary mt-2 button_style">Update</button>
+                            {% else %}
+                            <button type="button" id="create-clientadmin" class="btn btn-primary mt-2 button_style">Save</button>
+                            {% endif %}
+                        </td>
+                    </tr>
+                </tbody>
+            </table>
+        </div>
+    </form>
+    
+</div>
+</div>
+
+
+<div class="center-container" id="myWizardContainer">
+    <div>
+        <div class="stepwizard">
+            <div class="stepwizard-row setup-panel"></div>
+        </div>
+    </div>
+</div>
+</div>
+{% extends 'appbuilder/base.html' %} {% block head_css %} {{ super() }}
+<link rel="stylesheet" type="text/css" href="{{ url_for('static', filename='main/css/gpt_type_list.css') }}" />
+<link
+  rel="stylesheet"
+  type="text/css"
+  href="{{ url_for('static', filename='main/css/theme.css') }}"
+/>
+{% endblock %}

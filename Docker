@@ -1,0 +1,4 @@
+FROM apache/airflow:2.7.3
+
+# Copy the custom web authentication plugin and templates
+COPY ./airflow/plugins/custom_login /opt/airflow/plugins

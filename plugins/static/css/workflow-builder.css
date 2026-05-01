@@ -1,0 +1,120 @@
+  /* Custom styles for the side menu */
+  html,
+  body {
+      height: 100%;
+      margin: 0;
+      padding: 0;
+  }
+
+  .h-100{
+    height: 100%;
+  }
+  .mb-3{
+    margin-bottom: 3% !important;
+  }
+
+  .w-100{
+    width: 100%;
+  }
+
+  /* Custom styles for the side menu */
+  .side-menu {
+      height: 100%;
+      background-color: #f8f9fa;
+      padding: 15px;
+      border-right: 1px solid #dee2e6;
+  }
+
+  .side-menu h6 {
+      margin-bottom: 10px;
+      color: #495057;
+  }
+
+  .list-group-item {
+      cursor: pointer;
+      transition: background-color 0.3s;
+  }
+
+  .list-group-item:hover {
+      background-color: #e9ecef;
+  }
+
+  .chat-box{
+      display: flex;
+      flex-flow: column;
+      justify-content: space-between
+  }
+
+  .textarea-container {
+    position: relative;
+    display: inline-block;
+}
+
+#dynamic-textarea {
+    width: 100%;
+    min-height: 50px;
+    max-height: 200px; /* Maximum height before scrollbar appears */
+    overflow-y: auto; /* Enables scrollbar if content overflows */
+    resize: none; /* Optional: disables the manual resize handle */
+}
+
+.textarea-with-button {
+    max-height: 200px;
+    resize: none;
+    padding-right: 3% !important; /* Space for the button */
+    box-sizing: border-box;
+    width: 100%;
+    height: 44px !important;/* Adjust as needed */
+    border: 1px solid #ccc;
+    border-radius: 4px;
+    padding: 10px;
+    font-size: 16px;
+}
+
+.arrow-button {
+    z-index: 99999;
+    position: absolute;
+    right: 5px;
+    top: 30%;
+    transform: translateY(-50%);
+    border: none;
+    background-color: #f1f1f1;
+    border-radius: 4px;
+    padding: 5px 10px;
+    cursor: pointer;
+}
+.arrow-button:hover {
+    background-color: #ddd;
+}
+.d-flex{
+    display: flex !important;
+}
+
+.justify-conetent-center{
+    justify-content: center !important;
+}
+
+.align-items-center{
+    align-items: center !important;
+}
+
+.workflow-container{
+    position: relative;
+    top: 66px;
+}
+footer{
+    display: none !important;
+}
+.workflow-name{
+    text-align: end;
+    top: 8px;
+}
+.text-align-center{
+    text-align: center !important;
+}
+.list-group-item{
+    margin-bottom: 2%;
+}
+.text-align-end{
+    text-align: end !important;
+}

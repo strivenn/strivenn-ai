@@ -1,0 +1,21 @@
+{% extends 'appbuilder/baselayout.html' %}
+{% block head_js %}
+    {{ super() }}
+    <link href="https://fonts.googleapis.com/css2?family=Oxygen:wght@300;400;700&display=swap" rel="stylesheet">
+
+    <script src="{{url_for('static',filename='main/js/jquery.js')}}"></script>
+    <script src="{{url_for('static',filename='main/js/script.js')}}"></script>
+{% endblock %}
+{% block body %}
+{% block content %}
+  <form method="post" action="{{ url_for('WorkFlows.add_workflow') }}">
+    <!-- {{ csrf_token() }}  {# Add this line to include the CSRF token #} -->
+    <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+    <label for="workflow_name">Enter your workflow name:</label>
+    <input type="text" id="workflow_name" name="workflow_name" required>
+    <label for="workflow_task">Task:</label>
+    <textarea id="workflow_task" name="workflow_task" required></textarea>
+    <button type="submit">Submit</button>
+  </form>
+{% endblock %}
+{% endblock %}

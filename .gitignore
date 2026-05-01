@@ -1,0 +1,8 @@
+airflow_venv/
+.env
+plugins/.env
+*.db
+logs/
+attachment_files/
+airflow-webserver.pid
+.env.save

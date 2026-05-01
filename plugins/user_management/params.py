@@ -1,0 +1,13 @@
+USER_NOT_FOUND = "User is not found."
+ADD_USER_SUCCESS = "User added successfully"
+PASSWORD_MUST_MATCH = "Password and Confirm password must be same"
+USERNAME_EXIST = "Username already exists"
+EMAIL_EXIST = "Email already exists"
+EDIT_USER_SUCCESS = "User edited successfully"
+DELETED_STATUS = 0
+RECORD_STATUS = 1
+USER_DELETE_SUCCESS_MESSAGE = "User deleted successfully"
+USER_DELETE_SUCCESS_FAILURE = "An error occurred while deleting the User"
+USER_LIMIT_EXCEEDED = "Cannot add user: User Limit Exceeded"
+CLIENT_ADMIN_ROLE="Client Admin"
+DEFAULT_ROLE="Default User"

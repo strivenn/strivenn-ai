@@ -1,0 +1,814 @@
+<script src="{{url_for('static',filename='main/js/jquery.js')}}"></script>
+<script src="{{url_for('static',filename='main/js/miscellaneous.js')}}"></script>
+<link rel="stylesheet" href="{{url_for('static',filename='main/css/miscellaneous.css')}}"> 
+<script src="https://cdn.jsdelivr.net/gh/jerosoler/Drawflow/dist/drawflow.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/5.13.0/js/all.min.js" integrity="sha256-KzZiKy0DWYsnwMF+X1DvQngQ2/FxF7MF3Ff72XcpuPs=" crossorigin="anonymous"></script>
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/gh/jerosoler/Drawflow@0.0.48/dist/drawflow.min.css">
+<link href="https://fonts.googleapis.com/css2?family=Oxygen:wght@300;400;700&display=swap" rel="stylesheet">
+
+<!-- <link rel="stylesheet" type="text/css" href="beautiful.css" /> -->
+<style>
+    :root {
+--border-color: #cacaca;
+--background-color: #ffffff;
+
+--background-box-title: #f7f7f7;
+}
+footer.footer{
+    display: none !important;
+}
+
+html, body {
+margin: 0px;
+padding: 0px;
+width: 100vw;
+height: 100vh;
+overflow: hidden;
+font-family: 'Roboto', sans-serif;
+}
+
+header {
+height: 66px;
+border-bottom: 1px solid var(--border-color);
+padding-left: 20px;
+}
+header h2 {
+margin: 0px;
+line-height: 66px;
+}
+header a {
+color: black;
+}
+.them-edit-link {
+position: absolute;
+top: 10px;
+right: 100px;
+color: black;
+font-size: 40px;
+}
+.them-edit-link a {
+text-decoration: none;
+}
+
+.github-link{
+position: absolute;
+top: 10px;
+right: 20px;
+color: black;
+}
+
+.wrapper {
+width: 100%;
+height: calc(100vh - 67px);
+display: flex;
+}
+
+.col {
+overflow: auto;
+width: 300px;
+height: 100%;
+border-right: 1px solid var(--border-color);
+}
+
+.drag-drawflow {
+line-height: 50px;
+border-bottom: 1px solid var(--border-color);
+padding-left: 20px;
+cursor: move;
+user-select: none;
+font-size: 16px;
+font-weight: 400;
+line-height: 24px;
+color: rgb(42, 45, 52);
+}
+
+
+
+.menu {
+position: absolute;
+height: 40px;
+display: block;
+background: white;
+width: 100%;
+}
+.menu ul {
+padding: 0px;
+margin: 0px;
+line-height: 40px;
+}
+
+.menu ul li {
+display: inline-block;
+margin-left: 10px;
+border-right: 1px solid var(--border-color);
+padding-right: 10px;
+line-height: 40px;
+cursor: pointer;
+}
+
+.menu ul li.selected {
+font-weight: bold;
+}
+
+.btn-export {
+float: right;
+position: absolute;
+top: 10px;
+right: 10px;
+color: white;
+font-weight: bold;
+border: 1px solid #0e5ba3;
+background: #4ea9ff;
+padding: 5px 10px;
+border-radius: 4px;
+cursor: pointer;
+z-index: 5;
+}
+
+.btn-clear {
+float: right;
+position: absolute;
+top: 10px;
+right: 85px;
+color: white;
+font-weight: bold;
+border: 1px solid #96015b;
+background: #e3195a;
+padding: 5px 10px;
+border-radius: 4px;
+cursor: pointer;
+z-index: 5;
+}
+.swal-wide{
+width:80% !important;
+}
+
+.btn-lock {
+float: right;
+position: absolute;
+bottom: 10px;
+right: 140px;
+display: flex;
+font-size: 24px;
+color: white;
+padding: 5px 10px;
+background: #555555;
+border-radius: 4px;
+border-right: 1px solid var(--border-color);
+z-index: 5;
+cursor: pointer;
+}
+
+.bar-zoom {
+float: right;
+position: absolute;
+bottom: 10px;
+right: 10px;
+display: flex;
+font-size: 24px;
+color: white;
+padding: 5px 10px;
+background: #555555;
+border-radius: 4px;
+border-right: 1px solid var(--border-color);
+z-index: 5;
+}
+.bar-zoom svg {
+cursor: pointer;
+padding-left: 10px;
+}
+.bar-zoom svg:nth-child(1) {
+padding-left: 0px;
+}
+
+#drawflow {
+margin-top:30px;
+position: relative;
+width: calc(100vw - 301px);
+height: calc(100% - 50px);
+top: 40px;
+background: var(--background-color);
+background-size: 25px 25px;
+background-image:
+linear-gradient(to right, #f1f1f1 1px, transparent 1px),
+linear-gradient(to bottom, #f1f1f1 1px, transparent 1px);
+}
+
+@media only screen and (max-width: 768px) {
+.col {
+width: 50px;
+}
+.col .drag-drawflow span {
+display:none;
+}
+#drawflow {
+width: calc(100vw - 51px);
+}
+}
+
+
+
+/* Editing Drawflow */
+
+.drawflow .drawflow-node {
+background: var(--background-color);
+border: 1px solid var(--border-color);
+-webkit-box-shadow: 0 2px 15px 2px var(--border-color);
+box-shadow: 0 2px 15px 2px var(--border-color);
+padding: 0px;
+width: 200px;
+}
+
+.drawflow .drawflow-node.selected  {
+background: white;
+border: 1px solid #4ea9ff;
+-webkit-box-shadow: 0 2px 20px 2px #4ea9ff;
+box-shadow: 0 2px 20px 2px #4ea9ff;
+}
+
+.drawflow .drawflow-node.selected .title-box {
+color: #22598c;
+/*border-bottom: 1px solid #4ea9ff;*/
+}
+
+.drawflow .connection .main-path {
+stroke: #4ea9ff;
+stroke-width: 3px;
+}
+
+.drawflow .drawflow-node .input, .drawflow .drawflow-node .output {
+height: 15px;
+width: 15px;
+border: 2px solid var(--border-color);
+}
+
+.drawflow .drawflow-node .input:hover, .drawflow .drawflow-node .output:hover {
+background: #4ea9ff;
+}
+
+.drawflow .drawflow-node .output {
+right: 10px;
+}
+
+.drawflow .drawflow-node .input {
+left: -10px;
+background: white;
+}
+
+.drawflow > .drawflow-delete {
+border: 2px solid #43b993;
+background: white;
+color: #43b993;
+-webkit-box-shadow: 0 2px 20px 2px #43b993;
+box-shadow: 0 2px 20px 2px #43b993;
+}
+
+.drawflow-delete {
+border: 2px solid #4ea9ff;
+background: white;
+color: #4ea9ff;
+-webkit-box-shadow: 0 2px 20px 2px #4ea9ff;
+box-shadow: 0 2px 20px 2px #4ea9ff;
+}
+
+.drawflow-node .title-box {
+height: 50px;
+line-height: 50px;
+background: var(--background-box-title);
+border-bottom: 1px solid #e9e9e9;
+border-radius: 4px 4px 0px 0px;
+padding-left: 10px;
+}
+.drawflow .title-box svg {
+position: initial;
+}
+.drawflow-node .box {
+padding: 10px 20px 20px 20px;
+font-size: 14px;
+color: #555555;
+
+}
+.drawflow-node .box p {
+margin-top: 5px;
+margin-bottom: 5px;
+}
+
+.drawflow-node.welcome {
+width: 250px;
+}
+
+.drawflow-node.slack .title-box {
+border-radius: 4px;
+}
+
+.drawflow-node input, .drawflow-node select, .drawflow-node textarea {
+border-radius: 4px;
+border: 1px solid var(--border-color);
+height: 30px;
+line-height: 30px;
+font-size: 16px;
+width: 158px;
+color: #555555;
+}
+
+.drawflow-node textarea {
+height: 100px;
+}
+
+
+.drawflow-node.personalized {
+background: red;
+height: 200px;
+text-align: center;
+color: white;
+}
+.drawflow-node.personalized .input {
+background: yellow;
+}
+.drawflow-node.personalized .output {
+background: green;
+}
+
+.drawflow-node.personalized.selected {
+background: blue;
+}
+
+.drawflow .connection .point {
+stroke: var(--border-color);
+stroke-width: 2;
+fill: white;
+
+}
+
+.drawflow .connection .point.selected, .drawflow .connection .point:hover {
+fill: #4ea9ff;
+}
+
+/* Modal */
+.modal {
+display: none;
+position: fixed;
+z-index: 7;
+left: 0;
+top: 0;
+width: 100vw;
+height: 100vh;
+overflow: auto;
+background-color: rgb(0,0,0);
+background-color: rgba(0,0,0,0.7);
+
+}
+
+.modal-content {
+position: relative;
+background-color: #fefefe;
+margin: 15% auto; /* 15% from the top and centered */  
+padding: 20px;
+border: 1px solid #888;
+width: 400px; /* Could be more or less, depending on screen size */
+}
+
+/* The Close Button */
+.modal .close {
+color: #aaa;
+float: right;
+font-size: 28px;
+font-weight: bold;
+cursor:pointer;
+}
+
+@media only screen and (max-width: 768px) {
+.modal-content {
+width: 80%;
+}
+}
+
+</style>
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/5.13.0/css/all.min.css" integrity="sha256-h20CPZ0QyXlBuAw7A+KluUYx/3pK+c7lYEpqLTlxjYQ=" crossorigin="anonymous" />
+<link href="https://fonts.googleapis.com/css2?family=Roboto&display=swap" rel="stylesheet">
+<script src="https://cdn.jsdelivr.net/npm/sweetalert2@9"></script>
+<script src="https://unpkg.com/micromodal/dist/micromodal.min.js"></script>
+
+
+<!-- <header>
+  <h2>Drawflow</h2>
+  <div class="github-link"><a href="https://github.com/jerosoler/Drawflow" target="_blank"><i class="fab fa-github fa-3x"></i></a></div>
+  <div class="them-edit-link"><a href="https://jerosoler.github.io/drawflow-theme-generator/" target="_blank">🎨</a></div>
+</header> -->
+
+   <div id="toast" ></div>
+<div class="wrapper">
+
+  <div class="col gpt-type-lists" data-set="{{gpt_list}}">
+    {% for item in gpt_list %}
+    {% set transformed_string = item.name|lower|replace(" ", "") %}
+  
+    <div class="drag-drawflow" draggable="true" ondragstart="drag(event)" id="{{item.id}}" data-all = "{{item}}" data-node="{{transformed_string}}">
+      <i class="fas fa-sun"></i>
+  
+      <!-- <i class="fab fa-facebook"></i> -->
+    <span> {{ item.name }}</span>
+  </div>
+             
+          {% endfor %}
+  </div>
+ 
+  <!-- <div class="col">
+    <div class="drag-drawflow" draggable="true" ondragstart="drag(event)" data-node="ideagpt">
+        <i class="fas fa-sun"></i>
+      <span> Idea GPT</span>
+    </div>
+    <div class="drag-drawflow" draggable="true" ondragstart="drag(event)" data-node="draftgpt">
+      <i class="fas fa-pencil-ruler"></i>
+      <span> Draft Article GPT</span>
+    </div>
+    <div class="drag-drawflow" draggable="true" ondragstart="drag(event)" data-node="einsteingpt">
+      <i class="fas fa-brain"></i>
+      <span> Einstein GPT</span>
+    </div>
+    <div class="drag-drawflow" draggable="true" ondragstart="drag(event)" data-node="grammarlygpt">
+      <i class="fas fa-spell-check"></i>
+      <span> Grammarly or GPT</span>
+    </div>
+    <div class="drag-drawflow" draggable="true" ondragstart="drag(event)" data-node="seogpt">
+      <i class="fas fa-search"></i>
+      <span> SEO GPT</span>
+    </div>
+
+    <div class="drag-drawflow" draggable="true" ondragstart="drag(event)" data-node="dallegpt">
+      <i class="fas fa-images"></i>
+      <span> DALL-E GPT</span>
+    </div>
+  </div> -->
+
+
+
+
+  <div class="col-right">
+    <div class="menu" >
+        <div class="row">
+            <div class="col-lg-2 workflow-name" style="margin-left: 20px;">
+                <label for="workflow-name" >Workflow Name</label>
+            </div>
+            <div class="col-lg-4">
+                <input type="text" id="workflow-name" class="form-control">
+            </div>
+            <div class="col-lg-4">
+              <button type="button" id="create-workflow" class="btn-primary mt-2 button_style" style="height: 40px;">
+                {% if is_edit %}
+                Update Workflow
+                {% else %}
+                Create WorkFlow
+                {% endif %}
+              </button> 
+              <button type="button" class=" btn-primary mt-2 button_style" style="margin-left: 25px;height: 40px;" onclick="clearAll()">Clear All</button>
+          
+            </div>
+            <!-- <div class="col-lg-2">
+              <button type="button" class=" btn-primary mt-2 button_style" style="margin-left: 25px;" onclick="clearAll()">Clear All</button>
+            </div>-->
+        </div>
+      <!-- <ul>
+        <li onclick="editor.changeModule('Home'); changeModule(event);" class="selected">Home</li>
+        <li onclick="editor.changeModule('Other'); changeModule(event);">Other Module</li>
+      </ul> -->
+      <div class="workflow_type_container">
+        <div class="workflow_type col-lg-4">
+          <input type="radio" name="loop_flow" id="series_flow"  checked>
+            Series Workflow
+            <!-- <input type="radio" name="loop_flow" id="parallel_flow">
+            Parallel Workflow -->
+            <input type="radio" name="loop_flow" id="series_parallel_flow">
+            Series-parallel Workflow
+        </div>
+        <!-- <div class="workflow_type col-lg-2">
+          <label>
+            Loop Workflow
+          </label>
+            <input type="radio" id="loop_flow" name="parallel_flow-loop_flow"  value="loop">
+        </div>
+        <div class="workflow_type col-lg-3 d-none" id="loop_count_container">
+            Loop Count
+            <input type="number" id="loop_count">
+        </div> -->
+    </div>
+    
+    </div>
+    <div id="drawflow" ondrop="drop(event)" ondragover="allowDrop(event)">
+
+      <!-- <div class="btn-export" onclick="Swal.fire({ title: 'Export',
+      html: '<pre><code>'+JSON.stringify(editor.export(), null,4)+'</code></pre>'
+      })">Export</div>           -->
+      <div class="btn-lock">
+        <i id="lock" class="fas fa-lock" onclick="editor.editor_mode='fixed'; changeMode('lock');"></i>
+        <i id="unlock" class="fas fa-lock-open" onclick="editor.editor_mode='edit'; changeMode('unlock');" style="display:none;"></i>
+      </div>
+      <div class="bar-zoom">
+        <i class="fas fa-search-minus" onclick="editor.zoom_out()"></i>
+        <i class="fas fa-search" onclick="editor.zoom_reset()"></i>
+        <i class="fas fa-search-plus" onclick="editor.zoom_in()"></i>
+      </div>
+    </div>
+  </div>
+</div>
+<div id="editData" data-set="{{workflow_data}}"></div>
+
+<script>
+
+  var id = document.getElementById("drawflow");
+  const editor = new Drawflow(id);
+
+  function clearAll(){
+    editor.clearModuleSelected()
+  }
+
+
+  editor.reroute = true;
+  const dataToImport = {"drawflow":{"Home":{"data":{"1":{"id":1,"name":"welcome","data":{},"class":"welcome","html":"\n    <div>\n      <div class=\"title-box\">👏 Welcome!!</div>\n      <div class=\"box\">\n        <p>Simple flow library <b>demo</b>\n        <a href=\"https://github.com/jerosoler/Drawflow\" target=\"_blank\">Drawflow</a> by <b>Jero Soler</b></p><br>\n\n        <p>Multiple input / outputs<br>\n           Data sync nodes<br>\n           Import / export<br>\n           Modules support<br>\n           Simple use<br>\n           Type: Fixed or Edit<br>\n           Events: view console<br>\n           Pure Javascript<br>\n        </p>\n        <br>\n        <p><b><u>Shortkeys:</u></b></p>\n        <p>🎹 <b>Delete</b> for remove selected<br>\n        💠 Mouse Left Click == Move<br>\n        ❌ Mouse Right == Delete Option<br>\n        🔍 Ctrl + Wheel == Zoom<br>\n        📱 Mobile support<br>\n        ...</p>\n      </div>\n    </div>\n    ","typenode": false, "inputs":{},"outputs":{},"pos_x":50,"pos_y":50},"2":{"id":2,"name":"slack","data":{},"class":"slack","html":"\n          <div>\n            <div class=\"title-box\"><i class=\"fab fa-slack\"></i> Slack chat message</div>\n          </div>\n          ","typenode": false, "inputs":{"input_1":{"connections":[{"node":"7","input":"output_1"}]}},"outputs":{},"pos_x":1028,"pos_y":87},"3":{"id":3,"name":"telegram","data":{"channel":"channel_2"},"class":"telegram","html":"\n          <div>\n            <div class=\"title-box\"><i class=\"fab fa-telegram-plane\"></i> Telegram bot</div>\n            <div class=\"box\">\n              <p>Send to telegram</p>\n              <p>select channel</p>\n              <select df-channel>\n                <option value=\"channel_1\">Channel 1</option>\n                <option value=\"channel_2\">Channel 2</option>\n                <option value=\"channel_3\">Channel 3</option>\n                <option value=\"channel_4\">Channel 4</option>\n              </select>\n            </div>\n          </div>\n          ","typenode": false, "inputs":{"input_1":{"connections":[{"node":"7","input":"output_1"}]}},"outputs":{},"pos_x":1032,"pos_y":184},"4":{"id":4,"name":"email","data":{},"class":"email","html":"\n            <div>\n              <div class=\"title-box\"><i class=\"fas fa-at\"></i> Send Email </div>\n            </div>\n            ","typenode": false, "inputs":{"input_1":{"connections":[{"node":"5","input":"output_1"}]}},"outputs":{},"pos_x":1033,"pos_y":439},"5":{"id":5,"name":"template","data":{"template":"Write your template"},"class":"template","html":"\n            <div>\n              <div class=\"title-box\"><i class=\"fas fa-code\"></i> Template</div>\n              <div class=\"box\">\n                Ger Vars\n                <textarea df-template></textarea>\n                Output template with vars\n              </div>\n            </div>\n            ","typenode": false, "inputs":{"input_1":{"connections":[{"node":"6","input":"output_1"}]}},"outputs":{"output_1":{"connections":[{"node":"4","output":"input_1"},{"node":"11","output":"input_1"}]}},"pos_x":607,"pos_y":304},"6":{"id":6,"name":"github","data":{"name":"https://github.com/jerosoler/Drawflow"},"class":"github","html":"\n          <div>\n            <div class=\"title-box\"><i class=\"fab fa-github \"></i> Github Stars</div>\n            <div class=\"box\">\n              <p>Enter repository url</p>\n            <input type=\"text\" df-name>\n            </div>\n          </div>\n          ","typenode": false, "inputs":{},"outputs":{"output_1":{"connections":[{"node":"5","output":"input_1"}]}},"pos_x":341,"pos_y":191},"7":{"id":7,"name":"facebook","data":{},"class":"facebook","html":"\n        <div>\n          <div class=\"title-box\"><i class=\"fab fa-facebook\"></i> Facebook Message</div>\n        </div>\n        ","typenode": false, "inputs":{},"outputs":{"output_1":{"connections":[{"node":"2","output":"input_1"},{"node":"3","output":"input_1"},{"node":"11","output":"input_1"}]}},"pos_x":347,"pos_y":87},"11":{"id":11,"name":"log","data":{},"class":"log","html":"\n            <div>\n              <div class=\"title-box\"><i class=\"fas fa-file-signature\"></i> Save log file </div>\n            </div>\n            ","typenode": false, "inputs":{"input_1":{"connections":[{"node":"5","input":"output_1"},{"node":"7","input":"output_1"}]}},"outputs":{},"pos_x":1031,"pos_y":363}}},"Other":{"data":{"8":{"id":8,"name":"personalized","data":{},"class":"personalized","html":"\n            <div>\n              Personalized\n            </div>\n            ","typenode": false, "inputs":{"input_1":{"connections":[{"node":"12","input":"output_1"},{"node":"12","input":"output_2"},{"node":"12","input":"output_3"},{"node":"12","input":"output_4"}]}},"outputs":{"output_1":{"connections":[{"node":"9","output":"input_1"}]}},"pos_x":764,"pos_y":227},"9":{"id":9,"name":"dbclick","data":{"name":"Hello World!!"},"class":"dbclick","html":"\n            <div>\n            <div class=\"title-box\"><i class=\"fas fa-mouse\"></i> Db Click</div>\n              <div class=\"box dbclickbox\" ondblclick=\"showpopup(event)\">\n                Db Click here\n                <div class=\"modal\" style=\"display:none\">\n                  <div class=\"modal-content\">\n                    <span class=\"close\" onclick=\"closemodal(event)\">&times;</span>\n                    Change your variable {name} !\n                    <input type=\"text\" df-name>\n                  </div>\n\n                </div>\n              </div>\n            </div>\n            ","typenode": false, "inputs":{"input_1":{"connections":[{"node":"8","input":"output_1"}]}},"outputs":{"output_1":{"connections":[{"node":"12","output":"input_2"}]}},"pos_x":209,"pos_y":38},"12":{"id":12,"name":"multiple","data":{},"class":"multiple","html":"\n            <div>\n              <div class=\"box\">\n                Multiple!\n              </div>\n            </div>\n            ","typenode": false, "inputs":{"input_1":{"connections":[]},"input_2":{"connections":[{"node":"9","input":"output_1"}]},"input_3":{"connections":[]}},"outputs":{"output_1":{"connections":[{"node":"8","output":"input_1"}]},"output_2":{"connections":[{"node":"8","output":"input_1"}]},"output_3":{"connections":[{"node":"8","output":"input_1"}]},"output_4":{"connections":[{"node":"8","output":"input_1"}]}},"pos_x":179,"pos_y":272}}}}}
+  editor.start();
+  // editor.import(dataToImport);
+
+  
+  // Events!
+  editor.on('nodeCreated', function(id) {
+    // console.log("Node created " + id);
+  })
+
+  editor.on('nodeRemoved', function(id) {
+    // console.log("Node removed " + id);
+  })
+
+  editor.on('nodeSelected', function(id) {
+    // console.log("Node selected " + id);
+  })
+
+  editor.on('moduleCreated', function(name) {
+    // console.log("Module Created " + name);
+  })
+
+  editor.on('moduleChanged', function(name) {
+    // console.log("Module Changed " + name);
+  })
+
+  editor.on('connectionCreated', function(connection) {
+    // console.log('Connection created');
+    // console.log(connection);
+  })
+
+  editor.on('connectionRemoved', function(connection) {
+    // console.log('Connection removed');
+    // console.log(connection);
+  })
+
+  editor.on('mouseMove', function(position) {
+    // console.log('Position mouse x:' + position.x + ' y:'+ position.y);
+  })
+
+  editor.on('nodeMoved', function(id) {
+    // console.log("Node moved " + id);
+  })
+
+  editor.on('zoom', function(zoom) {
+    // console.log('Zoom level ' + zoom);
+  })
+
+  editor.on('translate', function(position) {
+    // console.log('Translate x:' + position.x + ' y:'+ position.y);
+  })
+
+  editor.on('addReroute', function(id) {
+    // console.log("Reroute added " + id);
+  })
+
+  editor.on('removeReroute', function(id) {
+    // console.log("Reroute removed " + id);
+  })
+
+  /* DRAG EVENT */
+
+  /* Mouse and Touch Actions */
+
+  var elements = document.getElementsByClassName('drag-drawflow');
+  for (var i = 0; i < elements.length; i++) {
+    elements[i].addEventListener('touchend', drop, false);
+    elements[i].addEventListener('touchmove', positionMobile, false);
+    elements[i].addEventListener('touchstart', drag, false );
+  }
+
+  var mobile_item_selec = '';
+  var mobile_last_move = null;
+ function positionMobile(ev) {
+   mobile_last_move = ev;
+ }
+
+ function allowDrop(ev) {
+    ev.preventDefault();
+  }
+
+  var currentDragData = null;
+
+  function drag(ev) {
+    if (ev.type === "touchstart") {
+      mobile_item_selec = ev.target.closest(".drag-drawflow").getAttribute('data-node');
+    } else {
+      currentDragData = ev.target.dataset;
+    ev.dataTransfer.setData("node", ev.target.getAttribute('data-node'));
+
+    }
+  }
+
+
+  function checkDupGpt(){
+    let isDupExist = false;
+    let data = JSON.parse(currentDragData.all.replace(/'/g, '"').replace(/"None"/g, '""').replace(/None/g, '""'));
+    let CurrentData = editor.export();
+    if(Object.keys(CurrentData.drawflow.Home.data).length){
+      Object.keys(CurrentData.drawflow.Home.data).forEach(e => {
+        if( CurrentData.drawflow.Home.data[e].data.id == data.id ){
+          showMessage(data.name+" GPT already added ","warning")
+          isDupExist = true;}});
+    }
+    return isDupExist;
+  }
+
+  function drop(ev) {
+    let isDupExist = checkDupGpt();
+    if(isDupExist) {return}
+    console.log("testing seo")
+    if (ev.type === "touchend") {
+      var parentdrawflow = document.elementFromPoint( mobile_last_move.touches[0].clientX, mobile_last_move.touches[0].clientY).closest("#drawflow");
+      if(parentdrawflow != null) {
+        addNodeToDrawFlow(mobile_item_selec, mobile_last_move.touches[0].clientX, mobile_last_move.touches[0].clientY);
+      }
+      mobile_item_selec = '';
+    } else {
+      let dataCurr = JSON.parse(currentDragData.all.replace(/'/g, '"').replace(/"None"/g, '""').replace(/None/g, '""'));
+      ev.preventDefault();
+      var data = ev.dataTransfer.getData("node");
+    addNodeToDrawFlow(data, ev.clientX, ev.clientY)
+     
+    }
+
+  }
+
+  function addNodeToDrawFlow(name, pos_x, pos_y) {
+    console.log("test call")
+    let data = JSON.parse(currentDragData.all.replace(/'/g, '"').replace(/"None"/g, '""').replace(/None/g, '""'));
+    if(editor.editor_mode === 'fixed') {
+      return false;
+    }
+    pos_x = pos_x * ( editor.precanvas.clientWidth / (editor.precanvas.clientWidth * editor.zoom)) - (editor.precanvas.getBoundingClientRect().x * ( editor.precanvas.clientWidth / (editor.precanvas.clientWidth * editor.zoom)));
+    pos_y = pos_y * ( editor.precanvas.clientHeight / (editor.precanvas.clientHeight * editor.zoom)) - (editor.precanvas.getBoundingClientRect().y * ( editor.precanvas.clientHeight / (editor.precanvas.clientHeight * editor.zoom)));
+    console.log("dataaaa",data)
+    let UIBox = `<div>
+        <div class="title-box"> <i class="fas fa-sun"></i> ${data.name}</div>
+      </div>`;
+      let text = data.name.replace(/\s+/g, '').toLowerCase();
+      editor.addNode(data.name, 1,  1, pos_x, pos_y, text, {id:data.id}, UIBox );
+
+    // switch (name) {
+    //   case 'ideagpt':
+    //   var ideagpt = `
+    //   <div>
+    //     <div class="title-box"> <i class="fas fa-sun"></i> Idea GPT</div>
+    //   </div>
+    //   `;
+    //     editor.addNode('Idea GPT', 0,  1, pos_x, pos_y, 'ideagpt', {id:"1"}, ideagpt );
+    //     break;
+    //   case 'draftgpt':
+    //     var draftgpt = `
+    //     <div>
+    //       <div class="title-box"><i class="fas fa-pencil-ruler"></i>Draft Article GPT</div>
+    //     </div>
+    //     `
+    //     editor.addNode('Draft Article GPT', 1, 1, pos_x, pos_y, 'draftgpt',  {id:"2"}, draftgpt );
+    //     break;
+    //   case 'einsteingpt':
+    //     var einsteingpt = `
+    //     <div>
+    //       <div class="title-box"><i class="fas fa-brain"></i> Einstein GPT</div>
+         
+    //     </div>
+    //     `;
+    //     editor.addNode('Einstein GPT', 1, 1, pos_x, pos_y, 'einsteingpt',  {id:"3"}, einsteingpt );
+    //     break;
+    //   case 'grammarlygpt':
+    //     var grammarlygpt = `
+    //     <div>
+    //       <div class="title-box"> <i class="fas fa-spell-check"></i>Grammarly or GPT</div>
+        
+    //     </div>
+    //     `;
+    //     editor.addNode('Grammarly or GPT', 1, 1, pos_x, pos_y, 'grammarlygpt',  {id:"4"}, grammarlygpt );
+    //     break;
+    //   case 'seogpt':
+    //     var seogpt = `
+    //     <div>
+    //       <div class="title-box"> <i class="fas fa-search"></i>SEO GPT </div>
+          
+    //     </div>
+    //     `;
+    //     editor.addNode('SEO GPT', 1, 1, pos_x, pos_y, 'seogpt',  {id:"5"}, seogpt );
+    //     break;
+    //   case 'dallegpt':
+    //       var dallegpt = `
+    //       <div>
+    //         <div class="title-box"> <i class="fas fa-images"></i>Dall-E GPT</div>
+    //       </div>
+    //       `;
+    //       editor.addNode('Dall-E GPT', 1, 0, pos_x, pos_y, 'dallegpt',  {id:"6"}, dallegpt );
+    //       break;
+    //   default:
+    // }
+  }
+
+var transform = '';
+function showpopup(e) {
+  e.target.closest(".drawflow-node").style.zIndex = "9999";
+  e.target.children[0].style.display = "block";
+  //document.getElementById("modalfix").style.display = "block";
+
+  //e.target.children[0].style.transform = 'translate('+translate.x+'px, '+translate.y+'px)';
+  transform = editor.precanvas.style.transform;
+  editor.precanvas.style.transform = '';
+  editor.precanvas.style.left = editor.canvas_x +'px';
+  editor.precanvas.style.top = editor.canvas_y +'px';
+//   console.log(transform);
+
+  //e.target.children[0].style.top  =  -editor.canvas_y - editor.container.offsetTop +'px';
+  //e.target.children[0].style.left  =  -editor.canvas_x  - editor.container.offsetLeft +'px';
+  editor.editor_mode = "fixed";
+
+}
+
+ function closemodal(e) {
+   e.target.closest(".drawflow-node").style.zIndex = "2";
+   e.target.parentElement.parentElement.style.display  ="none";
+   //document.getElementById("modalfix").style.display = "none";
+   editor.precanvas.style.transform = transform;
+     editor.precanvas.style.left = '0px';
+     editor.precanvas.style.top = '0px';
+    editor.editor_mode = "edit";
+ }
+
+  function changeModule(event) {
+    var all = document.querySelectorAll(".menu ul li");
+      for (var i = 0; i < all.length; i++) {
+        all[i].classList.remove('selected');
+      }
+    event.target.classList.add('selected');
+  }
+
+  function changeMode(option) {
+
+  //console.log(lock.id);
+    if(option == 'lock') {
+      lock.style.display = 'none';
+      unlock.style.display = 'block';
+    } else {
+      lock.style.display = 'block';
+      unlock.style.display = 'none';
+    }
+
+  }
+
+ // Function to get the selected value onchange
+function getSelectedValueOnChange(event) {
+  // Get the selected radio button
+  var selectedRadioButton = event.target;
+
+  // Check if the selected radio button is checked
+  if (selectedRadioButton.checked) {
+      // Return the value of the selected radio button
+      return selectedRadioButton.value;
+  }
+
+  return ''; // Return empty string if no radio button is selected
+}
+
+// Function to handle onchange event of radio buttons
+function handleRadioChange(event) {
+  var selectedValue = getSelectedValueOnChange(event);
+  if(selectedValue === "loop"){
+    document.querySelector("#loop_count_container").classList.remove('d-none')
+  }else{
+    document.querySelector("#loop_count_container").classList.contains('d-none') ? "" : document.querySelector("#loop_count_container").classList.add('d-none')
+  }
+}
+
+// Add onchange event listener to all radio buttons
+var radioButtons = document.getElementsByName('parallel_flow-loop_flow');
+for (var i = 0; i < radioButtons.length; i++) {
+  radioButtons[i].addEventListener('change', handleRadioChange);
+}
+
+
+</script>
+<link
+  rel="stylesheet"
+  type="text/css"
+  href="{{ url_for('static', filename='main/css/theme.css') }}"
+/>
+
+
+{% extends "appbuilder/base.html" %}

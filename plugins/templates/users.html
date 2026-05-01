@@ -1,0 +1,97 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <title>List Users</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="description" content="">
+    <meta name="author" content="">
+    <link href="/static/appbuilder/css/bootstrap.min.css" rel="stylesheet">
+    <link href="/static/appbuilder/css/fontawesome/fontawesome.min.css" rel="stylesheet">
+    <link href="/static/appbuilder/css/fontawesome/regular.min.css" rel="stylesheet">
+    <link href="/static/appbuilder/css/fontawesome/solid.min.css" rel="stylesheet">
+    <link href="/static/appbuilder/css/fontawesome/brands.min.css" rel="stylesheet">
+    <link href="/static/appbuilder/css/fontawesome/v4-shims.min.css" rel="stylesheet">
+    <link href="/static/appbuilder/datepicker/bootstrap-datepicker.css" rel="stylesheet">
+    <link href="/static/appbuilder/select2/select2.css" rel="stylesheet">
+    <link href="/static/appbuilder/select2/select2-bootstrap-theme.css" rel="stylesheet">
+    <link href="/static/appbuilder/css/flags/flags16.css" rel="stylesheet">
+    <link href="/static/appbuilder/css/ab.css" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/css2?family=Oxygen:wght@300;400;700&display=swap" rel="stylesheet">
+
+    <meta name="csrf-token" content="{{ csrf_token() }}">
+    <script src="/static/appbuilder/js/jquery-latest.js"></script>
+    <script src="/static/appbuilder/js/ab_filters.js"></script>
+    <script src="/static/appbuilder/js/ab_actions.js"></script>
+    <link rel="stylesheet" href="{{ url_for('static', filename='main/css/prompt.css') }}">
+    <script src="{{ url_for('static', filename='main/js/script.js') }}"></script>
+    <script src="{{ url_for('static', filename='main/js/miscellaneous.js') }}"></script>
+</head>
+
+<body>
+    <div class="container mt-4">
+        <div class="type-heading">
+            <h2>List Users</h2>
+        </div>
+
+        <div class="pagination">
+            <button>&laquo;</button>
+            <button class="active">1</button>
+            <button>2</button>
+            <button>&raquo;</button>
+            <select class="page-size">
+                <option value="10">10</option>
+                <option value="20">20</option>
+                <option value="30">30</option>
+            </select>
+        </div>
+
+        <div>
+            <p>Record Count: 30</p>
+        </div>
+
+        <div id="table-responsive" class="table-responsive mt-4">
+            <table class="user-table">
+                <thead>
+                    <tr>
+                        <th></th>
+                        <th>First Name</th>
+                        <th>Last Name</th>
+                        <th>Email</th>
+                        <th>Username</th>
+                        <th>Is Active</th>
+                        <th>Role</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for user in users_info %}
+                    <tr>
+                        <td>
+                            <button class="icon-btn"><i class="fas fa-edit"></i></button>
+                            <button class="icon-btn"><i class="fas fa-trash"></i></button>
+                        </td>
+                        <td>{{ user.first_name }}</td>
+                        <td>{{ user.last_name }}</td>
+                        <td>{{ user.email }}</td>
+                        <td>{{ user.username }}</td>
+                        <td>{{ user.active }}</td>
+                        <td>{{ user.role }}</td>
+                        
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+    </div>
+
+</body>
+
+</html>
+
+{% extends 'appbuilder/base.html' %}
+
+{% block head_css %}
+{{ super() }}
+<link rel="stylesheet" type="text/css" href="{{ url_for('static', filename='main/css/users_list.css') }}">
+<link rel="stylesheet" type="text/css" href="{{ url_for('static', filename='main/css/theme.css') }}">
+{% endblock %}

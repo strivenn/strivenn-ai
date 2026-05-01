@@ -1,0 +1,39 @@
+<!DOCTYPE html>
+
+<head>
+  <title>GPT</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta name="description" content="">
+  <meta name="author" content="">
+  <link href="/static/appbuilder/css/bootstrap.min.css" rel="stylesheet">
+  <link href="/static/appbuilder/css/fontawesome/fontawesome.min.css" rel="stylesheet">
+  <link href="/static/appbuilder/css/fontawesome/regular.min.css" rel="stylesheet">
+  <link href="/static/appbuilder/css/fontawesome/solid.min.css" rel="stylesheet">
+  <link href="/static/appbuilder/css/fontawesome/brands.min.css" rel="stylesheet">
+  <link href="/static/appbuilder/css/fontawesome/v4-shims.min.css" rel="stylesheet">
+  <link href="/static/appbuilder/datepicker/bootstrap-datepicker.css" rel="stylesheet">
+  <link href="/static/appbuilder/select2/select2.css" rel="stylesheet">
+  <link href="/static/appbuilder/select2/select2-bootstrap-theme.css" rel="stylesheet">
+  <link href="/static/appbuilder/css/flags/flags16.css" rel="stylesheet">
+  <link href="/static/appbuilder/css/ab.css" rel="stylesheet">
+  <script src="/static/appbuilder/js/jquery-latest.js" nonce=""></script>
+  <script src="/static/appbuilder/js/ab_filters.js" nonce=""></script>
+  <script src="/static/appbuilder/js/ab_actions.js" nonce=""></script>
+  <!-- Google font - Oxygen -->
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Oxygen:wght@300;400;700&display=swap" rel="stylesheet">
+  <link rel="stylesheet" type="text/css" href="{{url_for('static',filename='main/css/custom.css')}}">
+  <!-- custom scripts and css -->
+  <meta name="csrf-token" content="{{ csrf_token() }}">
+  <script src="{{url_for('static',filename='main/js/jquery.js')}}"></script>
+  <script src="{{url_for('static',filename='main/js/script.js')}}"></script>
+  <link rel="stylesheet" href="{{url_for('static',filename='main/css/prompt.css')}}">
+</head>
+
+<body>
+  {% block content %}
+  {% endblock %}
+</body>
+
+</html>

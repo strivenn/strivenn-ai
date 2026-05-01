@@ -1,0 +1,193 @@
+<script src="{{url_for('static',filename='main/js/jquery.js')}}"></script>
+<script src="{{url_for('static',filename='main/js/miscellaneous.js')}}"></script>
+<link href="https://fonts.googleapis.com/css2?family=Oxygen:wght@300;400;700&display=swap" rel="stylesheet">
+
+<meta name="csrf-token" content="{{ csrf_token() }}">
+<div class="container-fluid">
+    <div class="row type-heading">
+        <div class="col-xs-9 col-md-9">
+            <h2>Assistants</h2>
+        </div>
+        <div class="col-xs-3 col-md-3 text-right">
+            <div class="Newtype-button">
+                <a href="{{ url_for('Assistants.add_gpt_assistants') }}"><button class="new-prompt text-align-center btn btn-primary button_style">+ New Assistant</button></a>
+            </div>
+        </div>
+    </div>
+</div>
+
+
+<div class="toast"></div>
+
+<div class="container-fluid">
+    <div class="row">
+        <div class="col-xs-12 col-md-12">
+            <div id="table-responsive">
+                <form method="get" action="{{ url_for('Assistants.index') }}">
+                    <button type="button" id="access-control-button" class="btn btn-primary button_style">Access Control</button>
+                    <input type="text" id="search-input" name="search" placeholder="Search..." value="{{ search }}">
+                </form>
+                <table class="table table-bordered table-hover">
+                    <thead>
+                        <tr>
+                            <th></th>
+                            <th>Name</th>
+                            <th>Description</th>
+                            <th>Instruction</th>
+                            <th>Type</th>
+                            <th></th>
+                            {% if is_superadmin == 1 %}
+                            <th></th>
+                            {% endif %}
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for gpt in gpt_info %}
+                        <tr>
+                            <td><input type="radio" class="gpt-radio" name="gpt-selection" data-gpt-id="{{ gpt.id }}"></td>
+                            <td>{{ gpt.name }}</td>
+                            <td>{{ gpt.description }}</td>
+                            <td>{{ gpt.truncated_instruction }}</td>
+                            <td>{{ gpt.type }}</td>
+                            <td><a href="{{ url_for('Assistants.edit_gpt_assistants', gpt_id=gpt.id) }}"><button style="border: none;" class="custom_butt_col"><i class="fa fa-edit"></i></button></a>
+                            </td>
+                            {% if is_superadmin == 1 %}
+                            <td>
+                                <a href="#" class="delete-gpt" data-gpt-id="{{ gpt.id }}"><button style="border: none;" class="custom_butt_col"><i class="fa fa-trash"></i></button></a>
+                            </td>
+                            {% endif %}
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+                <div id="pagination-info" data-total="{{ total }}" data-page="{{ page }}" data-per-page="{{ per_page }}">
+                </div>
+                <!-- delete confirmation modal -->
+                <div class="modal fade" id="deleteConfirmationModal" tabindex="-1" role="dialog"
+                    aria-labelledby="deleteConfirmationModalLabel" aria-hidden="true">
+                    <div class="modal-dialog" role="document">
+                        <div class="modal-content">
+                            <div class="modal-header">
+                                <button type="button" class="close" data-dismiss="modal" aria-label="Close">
+                                    <span aria-hidden="true">&times;</span>
+                                </button>
+                                <h4 class="modal-title" id="deleteConfirmationModalLabel">Confirmation</h4>
+                            </div>
+                            <div class="modal-body">
+                                <p id="deleteConfirmationMessage">Are you sure you want to delete this Assistant?</p>
+                            </div>
+                            <div class="modal-footer">
+                                <button type="button" class="btn btn-default custom_butt_col" data-dismiss="modal">Cancel</button>
+                                <button type="button" id="deleteConfirmButton" class="btn btn-primary custom_butt_col">Confirm</button>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                <!-- Pagination Controls -->
+                <nav aria-label="Page navigation" class="pagenav">
+                    <ul class="pagination">
+                        {% if page > 1 %}
+                        <li class="page-item">
+                            <a class="page-link main-pagination-link" id="main-pagination-link" href="{{ url_for('Assistants.assistants',search=search, page=page-1, per_page=per_page) }}" aria-label="Previous">
+                                <span aria-hidden="true">&laquo;</span>
+                            </a>
+                        </li>
+                        {% endif %}
+                        {% set total_pages = (total + per_page - 1) // per_page %}
+                        {% for p in range(1, total_pages + 1) %}
+                        <li class="page-item {% if p == page %}active{% endif %}">
+                            <a class="page-link main-pagination-link" href="{{ url_for('Assistants.assistants',search=search, page=p, per_page=per_page) }}">{{ p }}</a>
+                        </li>
+                        {% endfor %}
+                        {% if page * per_page < total %} 
+                        <li class="page-item">
+                            <a class="page-link main-pagination-link" href="{{ url_for('Assistants.assistants',search=search, page=page+1, per_page=per_page) }}" aria-label="Next">
+                                <span aria-hidden="true">&raquo;</span>
+                            </a>
+                        </li>
+                        {% endif %}
+                    </ul>
+                </nav>
+            </div>
+        </div>
+    </div>
+</div>
+
+
+<div class="center-container" id="myWizardContainer">
+    <div>
+        <div class="stepwizard">
+            <div class="stepwizard-row setup-panel"></div>
+        </div>
+    </div>
+</div>
+<!-- Modal for GPT-User Access Control -->
+<div id="access-control-modal" class="modal">
+    <div class="modal-content access-control-modal-content">
+        <span class="close">&times;</span>
+        <h3>Assistant-User Access</h3>
+        <div>
+            <!-- Search form -->
+            <form id="modal-search-form" class="form-inline mb-3">
+                <input type="search" class="form-control mr-sm-2" placeholder="Search..." aria-label="Search"
+                    name="modal_search" id="modal-search-input">
+                <!-- <button class="btn btn-outline-primary my-2 my-sm-0" type="submit">Search</button> -->
+            </form>
+        </div>
+        <table class="table table-bordered" style="margin-top: 60px;">
+            <thead>
+                <tr>
+                    <th></th>
+                    <th>User Name</th>
+                    <th>Email</th>
+                    <th></th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for user in users %}
+                <tr>
+                    <td><input type="checkbox" class="user-checkbox" data-user-id="{{ user.id }}"></td>
+                    <td>{{ user.first_name }} {{ user.last_name }}</td>
+                    <td>{{ user.email }}</td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+        <nav aria-label="Page navigation" class="pagenav">
+            <ul class="pagination justify-content-center" id="modal_pagination" style="margin: 0;">
+                <!-- Pagination links will be dynamically inserted here -->
+            </ul>
+        </nav>
+        <!-- Pagination and Update Access in the same row -->
+        <div class="d-flex justify-content-between align-items-center">
+            <button id="update-access" class="custom_butt_col btn btn-primary">Update Access</button>
+        </div>
+    </div>
+</div>
+<!-- Modal for GPT-User Access Confirmation -->
+<div class="modal fade" id="accessConfirmationModal" tabindex="-1" role="dialog"
+    aria-labelledby="accessConfirmationModalLabel" aria-hidden="true">
+    <div class="modal-dialog" role="document">
+        <div class="modal-content">
+            <div class="modal-header">
+                <button type="button" class="close" data-dismiss="modal" aria-label="Close">
+                    <span aria-hidden="true">&times;</span>
+                </button>
+                <h4 class="modal-title" id="accessConfirmationModalLabel">Confirmation</h4>
+            </div>
+            <div class="modal-body">
+                <p id="accessConfirmationMessage">This Assistant is currently being used in a workflow. Are you sure you
+                    want to remove access?</p>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-default" data-dismiss="modal">Cancel</button>
+                <button type="button" id="accessConfirmButton" class="btn btn-primary">Confirm</button>
+            </div>
+        </div>
+    </div>
+</div>
+</div>
+{% extends 'appbuilder/base.html' %} {% block head_css %} {{ super() }}
+<link rel="stylesheet" type="text/css" href="{{ url_for('static', filename='main/css/gpt_type_list.css') }}" />
+<link rel="stylesheet" type="text/css" href="{{ url_for('static', filename='main/css/theme.css') }}" />
+{% endblock %}

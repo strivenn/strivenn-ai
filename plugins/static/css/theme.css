@@ -1,0 +1,297 @@
+:root {
+  --primary-color: #FFC128;
+  --secondary-color: #2a2d34;
+  --background-color: #ffffff;
+  --white-color: #ffffff;
+  --teal-color: #0e7c7b;
+  --menu-hover-color: #0e7c7be6;
+  --tertiary-color: #002642;
+  --font-family-oxygen: "Oxygen", sans-serif;
+}
+
+h2 {
+  font-size: 36px;
+  font-weight: 600;
+  line-height: 54px;
+  color: rgb(42, 45, 52);
+}
+
+.stepwizard_circle {
+  background-color: var(--primary-color);
+  border-color: var(--primary-color);
+  color: var(--background-color);
+}
+
+.stepwizard_circle:hover {
+  background-color: var(--background-color);
+  border: 2px solid var(--primary-color);
+  color: var(--secondary-color);
+}
+
+.button_style,
+.custom_butt_col {
+  background-color: var(--primary-color) !important;
+  border-color: var(--primary-color) !important;
+  color: black !important;
+  border-radius: 20px;
+  font-size: 16px;
+  font-weight: 700;
+  line-height: 24px;
+  text-transform: uppercase;
+}
+
+.button_style:hover,
+.custom_butt_col:hover,
+.page-link.main-pagination-link:hover {
+  color: white !important;
+  background-color: var(--teal-color) !important;
+  border-color: var(--teal-color) !important;
+}
+
+.drawflow-node .title-box {
+  height: auto !important;
+  line-height: 30px !important;
+
+}
+
+/* Custom styles for the checkbox if needed */
+.checkbox-container {
+  display: flex;
+  align-items: center;
+  /* Vertically align the checkbox */
+}
+
+.checkbox-container input {
+  margin: 0;
+  /* Remove default margin if needed */
+}
+
+/* General styles for the table */
+.table {
+  border-radius: 5px;
+  overflow: hidden;
+  font-size: 16px;
+  font-weight: 400;
+  line-height: 24px;
+  color: rgb(42, 45, 52);
+}
+
+/* Styling for the toggle button */
+.toggle-nested-users .btn-toggle {
+  background-color: #28a745;
+  border-color: #28a745;
+  padding: 10px;
+  border-radius: 50%;
+  /* Makes the button round */
+  font-size: 14px;
+  text-align: center;
+  transition: background-color 0.3s, transform 0.3s;
+  width: 35px;
+  /* Set fixed width */
+  height: 35px;
+  /* Set fixed height */
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  box-shadow: 0 0 0 0.2rem rgba(40, 167, 69, 0.5);
+  /* Optional shadow on focus */
+}
+
+.toggle-nested-users .btn-toggle:hover {
+  background-color: #218838;
+  border-color: #1e7e34;
+  transform: scale(1.1);
+}
+
+.toggle-nested-users .btn-toggle:focus {
+  outline: none;
+  box-shadow: 0 0 0 0.2rem rgba(40, 167, 69, 0.5);
+}
+
+/* Styling for the nested user rows */
+.nested-users-table {
+  margin-top: 20px;
+  background-color: #f8f9fa;
+  border-radius: 5px;
+}
+
+.nested-user-row {
+  background-color: #e9ecef;
+}
+
+.nested-user-row:hover {
+  background-color: #d6d8db;
+}
+
+/* Styling for + and - icons */
+.toggle-nested-users .fa-plus,
+.fa-minus {
+  font-size: 10px;
+  /* color: white; */
+}
+
+/* Button for active users */
+.btn-primary {
+  background-color: #007bff;
+  border-color: #007bff;
+}
+
+.btn-primary:hover {
+  background-color: #0056b3;
+  border-color: #004085;
+}
+
+/* Button for deleting users */
+.btn-danger {
+  background-color: #dc3545;
+  border-color: #dc3545;
+}
+
+.btn-danger:hover {
+  background-color: #c82333;
+  border-color: #bd2130;
+}
+
+/* ck */
+.moalheader-alignment {
+  display: inline-block !important;
+  margin-top: 5px !important;
+}
+
+body {
+  font-family: var(--font-family-oxygen) !important;
+  /* because we don't want to have the font family applied */
+  font-weight: 400 !important;
+  font-style: normal;
+}
+
+.oxygen-light {
+  font-family: var(--font-family-oxygen);
+  font-weight: 300;
+  font-style: normal;
+}
+
+.oxygen-regular {
+  font-family: var(--font-family-oxygen);
+  font-weight: 400;
+  font-style: normal;
+}
+
+.oxygen-bold {
+  font-family: var(--font-family-oxygen);
+  font-weight: 700;
+  font-style: normal;
+}
+
+header .navbar.navbar-fixed-top {
+  background-color: var(--secondary-color) !important;
+  /* because we don't want to have the background applied */
+}
+
+header .nav>li:focus-within>a,
+header .nav>li>a:focus,
+header .nav>li>a:hover {
+  background-color: var(--secondary-color);
+}
+
+header .navbar a {
+  color: var(--primary-color);
+  font-weight: 400;
+  line-height: 24px;
+  font-size: 16px;
+}
+
+header ul.nav.navbar-nav li:hover a {
+  color: var(--menu-hover-color);
+}
+
+a.dropdown-toggle .navbar-user-icon {
+  background-color: var(--primary-color);
+  color: var(--secondary-color);
+  font-weight: 700;
+}
+
+ul.dropdown-menu {
+  background-color: var(--secondary-color);
+  border-color: var(--secondary-color);
+}
+
+ul.dropdown-menu .divider {
+  background-color: var(--secondary-color);
+}
+
+header ul.nav.navbar-nav ul.dropdown-menu li a {
+  color: var(--primary-color);
+  background-color: var(--secondary-color);
+}
+
+header ul.nav.navbar-nav ul.dropdown-menu li:hover a {
+  color: var(--menu-hover-color);
+}
+
+.type-heading {
+  display: flex;
+  align-items: center;
+  margin-bottom: 20px;
+}
+
+/* Modify pagination button styles */
+ul.pagination .page-item .page-link,
+ul.pagination li>span {
+  background-color: var(--secondary-color);
+  color: var(--primary-color);
+  border-radius: 0;
+}
+
+ul.pagination li {
+  font-size: 16px;
+  line-height: 24px;
+}
+
+.pagination .page-link:hover {
+  background-color: #ffcf59;
+  color: #000;
+}
+
+.pagination .page-item.active .page-link {
+  background-color: var(--teal-color);
+  color: var(--white-color);
+  border-color: var(--teal-color);
+}
+
+table.table.table-bordered.table-hover thead tr th {
+  background-color: var(--secondary-color);
+  color: var(--primary-color);
+}
+
+table.table.table-bordered.table-hover .custom_butt_col {
+  height: 40px;
+  width: 40px;
+  border-radius: 10px;
+}
+
+.mt-30 {
+  margin-top: 30px;
+}
+
+.panel-primary>.panel-heading {
+  background-color: var(--secondary-color);
+  color: var(--primary-color);
+}
+
+.panel-primary>.panel-heading h2 {
+  margin: 5px auto;
+}
+
+#workflow_access .custom_butt_col {
+  border-radius: 0;
+  border-top-left-radius: 6px;
+  border-bottom-left-radius: 6px;
+}
+
+#workflow_edit button.custom_butt_col {
+  border-radius: 0;
+  border-top-right-radius: 6px;
+  border-bottom-right-radius: 6px;
+}

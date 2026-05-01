@@ -1,0 +1,118 @@
+.list-container{
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    text-align: center;
+}
+
+.content-center{
+    height: 100%;
+    display: flex;
+    justify-self: center;
+    align-items: center;
+}
+
+footer{
+    display: none !important;
+}
+
+.iconbar{
+    position: absolute;
+    right: 10px;
+    top: calc((100% / 2) - 8px);
+}
+
+.text-list {
+    margin-bottom: 0 ;
+    font-size: 18px;
+
+}
+
+.redirect{
+    text-decoration: none;
+    color: #002642;
+    /* padding: 10px;
+    background: gainsboro;
+    border-radius: 5px; */
+}
+.redirect-container{
+    margin-top:20px;
+}
+.notFound-container{
+    width: 200px;
+    margin: auto;
+}
+.workflow-list-container{
+    /* height: 70vh; */
+    overflow-y: scroll;
+}
+.workflow-list-container{
+    -ms-overflow-style: none; 
+    scrollbar-width: none; 
+    overflow-y: scroll; 
+  }
+  
+.workflow-list-container::-webkit-scrollbar {
+  display: none; 
+}
+.alert{
+  color: #931621;
+}
+/* Modal Background */
+#workflow-access-control-modal {
+  display: none; /* Hidden by default */
+  position: fixed; /* Stay in place */
+  left: 0;
+  top: 0;
+  width: 100%; /* Full width */
+  height: 100vh; /* Full height relative to viewport */
+  background-color: rgba(0, 0, 0, 0.5); /* Black with opacity */
+  z-index: 2500; /* Sit on top */
+  overflow: auto; /* Enable scroll if needed */
+  display: flex; /* Flexbox for centering */
+  align-items: center; /* Center vertically */
+  justify-content: center; /* Center horizontally */
+  padding: 20px; /* Adds padding for some space around the modal */
+  box-sizing: border-box; /* Include padding and border in element's width and height */
+}
+
+/* Modal Content */
+.workflow-access-modal-content {
+  background-color: #fff;
+  padding: 20px;
+  border-radius: 8px;
+  box-shadow: 0 4px 8px rgba(0, 0, 0, 0.2);
+  max-width: 600px; /* Maximum width of modal */
+  width: 90%; /* Width relative to screen */
+  max-height: 90vh; /* Limit height to avoid overflow */
+  overflow-y: auto; /* Scroll if content is too large */
+  position: relative; /* Relative positioning for close button */
+  margin: auto; /* Center horizontally */
+}
+
+/* Close Button */
+.workflow-access-modal-content .close {
+  position: absolute; /* Position close button */
+  top: 10px;
+  right: 15px;
+  font-size: 20px;
+  color: #333;
+  cursor: pointer;
+  z-index: 2600; /* Ensure it stays on top of modal content */
+}
+.pagenav {
+  margin-bottom: 0; /* Removes any bottom margin */
+}
+
+#workflow_user_modal_pagination {
+  margin: 0; /* Removes any extra margin */
+}
+  
+div.row #workflow_access, div.row #workflow_edit{
+  display: flex;
+  align-items: stretch;
+}
+/* #workflow_access button.custom_butt_col{
+  display: flex;
+  align-items: center;
+} */

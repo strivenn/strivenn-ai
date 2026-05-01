@@ -1,0 +1,128 @@
+<script src="{{url_for('static',filename='main/js/jquery.js')}}"></script>
+<script src="{{url_for('static',filename='main/js/miscellaneous.js')}}"></script>
+<link href="https://fonts.googleapis.com/css2?family=Oxygen:wght@300;400;700&display=swap" rel="stylesheet">
+
+<meta name="csrf-token" content="{{ csrf_token() }}">
+<div class="toast"></div>
+<div class="container-fluid mt-30">
+    <div class="row">
+        <div class="col-xs-12 col-md-12">
+            <div class="panel panel-primary ">
+                <div class="panel-heading">
+                    {% if gpt and gpt.id%}
+                    <h2>Edit Assistant</h2>
+                    {% else %}
+                    <h2>Add Assistant</h2>
+                    {% endif %}
+                </div>
+                <div class="panel-body">
+                    <form action="{{ url_for('Assistants.add_gpt_assistants') }}" method="post" id="gpt-form">
+                        <div class="table-responsive">
+                            <table class="table table-bordered">
+                                <tbody>
+                                    <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                                    <input type="hidden" id="gpt_id" name="gpt_id" value="{{ gpt.id if gpt and gpt.id else '' }}">
+                                    <!-- ... other form fields ... -->
+                                    <tr>
+                                        <td class="col-lg-2">
+                                            <label for="name">Name <strong style="color: red">*</strong></label>
+                                        </td>
+                                        <td>
+                                            <input class="form-control" type="text" id="gpt_name" name="name" required value="{{ gpt.name if gpt else '' }}">
+                                        </td>
+                                    </tr>
+                                    <tr>
+                                        <td class="col-lg-2">
+                                            <label for="description">Description</label>
+                                        </td>
+                                        <td>
+                                            <textarea class="form-control" id="gpt_description" name="description">{{ gpt.description if gpt else '' }}</textarea>
+                                        </td>
+                                    </tr>
+                                    <tr>
+                                        <td class="col-lg-2">
+                                            <label for="instruction">Instruction <strong style="color: red">*</strong></label>
+                                        </td>
+                                        <td>
+                                            <textarea class="form-control" id="gpt_instruction" name="instruction" required>{{ gpt.instruction if gpt else '' }}</textarea>
+                                        </td>
+                                    </tr>
+                                    <tr>
+                                        <td class="col-lg-2">
+                                            <label for="is_web_scrape">Is web scrape</label>
+                                        </td>
+                                        <td>
+                                            <input type="checkbox" id="is_web_scrape" name="is_web_scrape" value="1" {%
+                                                if gpt and gpt.is_web_scrape==1 %}checked{% endif %}>
+                                        </td>
+                                    </tr>
+                                    <tr>
+                                        <td class="col-lg-2">
+                                            <label for="type">Type <strong style="color: red">*</strong></label>
+                                        </td>
+                                        <td>
+                                            <select class="form-control" id="gpt_type" name="type" required>
+                                                <option value="GPT" {% if gpt and gpt.type=='GPT' %}selected{% endif %}>
+                                                    GPT</option>
+                                                <option value="DALL-E" {% if gpt and gpt.type=='DALL-E' %}selected{%
+                                                    endif %}>DALL-E</option>
+                                                <option value="ASSISTANT" {% if gpt and gpt.type=='ASSISTANT'
+                                                    %}selected{% endif %}>ASSISTANT</option>
+                                            </select>
+                                        </td>
+                                    </tr>
+                                    <tr id="upload-row" class="hidden">
+                                        <td colspan="2">
+                                            <div>
+                                                <button id="upload-btn" class="btn relative btn-secondary"
+                                                    type="button">
+                                                    <div class="flex w-full gap-2 items-center justify-center">
+                                                        Upload file
+                                                    </div>
+                                                </button>
+                                                <input id="gpt_file" type="file" style="display: none;">
+                                                <!-- Display the uploaded file name if it exists -->
+                                                <div id="file-name-status" style="margin-top: 10px;">
+                                                    {% if gpt and gpt.file %}
+                                                    <span>Uploaded File: {{ gpt.file.split('/')[-1] }}</span>
+                                                    {% endif %}
+                                                </div>
+                                            </div>
+                                        </td>
+                                    </tr>
+                                    <tr>
+                                        <td class="col-lg-2"></td>
+                                        <td>
+                                            {% if gpt and gpt.id %}
+                                            <button type="button" id="edit-gpt"
+                                                class="btn btn-primary mt-2 button_style">Update</button>
+                                            {% else %}
+                                            <button type="button" id="create-gpt"
+                                                class="btn btn-primary mt-2 button_style">Save</button>
+                                            {% endif %}
+                                        </td>
+                                    </tr>
+                                </tbody>
+                            </table>
+                        </div>
+                    </form>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+
+
+<div class="center-container" id="myWizardContainer">
+    <div>
+        <div class="stepwizard">
+            <div class="stepwizard-row setup-panel"></div>
+        </div>
+    </div>
+</div>
+</div>
+{% extends 'appbuilder/base.html' %} {% block head_css %} {{ super() }}
+<link rel="stylesheet" type="text/css" href="{{ url_for('static', filename='main/css/gpt_type_list.css') }}" />
+<link rel="stylesheet" type="text/css" href="{{ url_for('static', filename='main/css/theme.css') }}" />
+{% endblock %}

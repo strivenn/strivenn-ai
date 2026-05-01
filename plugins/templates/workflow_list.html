@@ -1,0 +1,37 @@
+{% extends 'appbuilder/baselayout.html' %}
+
+
+{% block head_js %}
+    {{ super() }}
+    <script src="{{url_for('static',filename='empty_plugin/jquery.js')}}"></script>
+    <script src="{{url_for('static',filename='empty_plugin/script.js')}}"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Oxygen:wght@300;400;700&display=swap" rel="stylesheet">
+
+{% endblock %}
+{% block body %}
+{% block content %}
+<script>console.log("wor***",workflow)</script>
+  <button id="add_workflow" type="button">Add Work Flow</button>
+  <div class="container">
+    <h3>Work Flow Details</h3>
+    <table class="table table-bordered">
+      <thead>
+        <tr>
+          <th>Name</th>
+          <th>Task</th>
+        </tr>
+      </thead>
+      <tbody>
+        {% for workflow in workflow_info %}
+          <tr>
+            <td>{{ workflow['name'] }}</td>
+            <td>{{ workflow['task'] }}</td>
+          </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+{% endblock %}
+
+
+{% endblock %}

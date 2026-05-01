@@ -1,0 +1,207 @@
+<script src="{{url_for('static',filename='main/js/jquery.js')}}"></script>
+<script src="{{url_for('static',filename='main/js/miscellaneous.js')}}"></script>
+<link href="https://fonts.googleapis.com/css2?family=Oxygen:wght@300;400;700&display=swap" rel="stylesheet">
+
+<meta name="csrf-token" content="{{ csrf_token() }}">
+<div class="toast"></div>
+
+<div class="panel panel-primary ">
+<div class="panel-heading">
+    {% if user and user.id%}
+    <h4 class="panel-title">Edit User</h4>
+    {% else %}
+    <h4 class="panel-title">Add User</h4>
+    {% endif %}
+</div>
+<div class="panel-body">
+    <form id="model_form" action="{{ url_for('user_management.add_user') }}" method="post" enctype="multipart/form-data">
+
+        <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+        <input type="hidden" id="user_id" name="user_id"
+            value="{{ user.id if user and user.id else '' }}">
+
+        <div class="table-responsive">
+            <table class="table table-bordered">
+                <tr>
+                    <td class="col-lg-2">
+                        <label for="first_name" control-label>
+                            First Name
+
+                            <strong style="color: red">&#42;</strong>
+
+                        </label>
+                    </td>
+                    <td>
+                        <input class="form-control" id="first_name" maxlength="256" name="first_name"
+                            placeholder="First Name" required type="text"
+                            value="{{ user.first_name if user else '' }}">
+                        <span class="help-block">Write the user first name or name</span>
+
+                    </td>
+                </tr>
+                <tr>
+                    <td class="col-lg-2">
+                        <label for="last_name" control-label>
+                            Last Name
+                            <strong style="color: red">&#42;</strong>
+                        </label>
+                    </td>
+                    <td>
+                        <input class="form-control" id="last_name" maxlength="256" name="last_name"
+                            placeholder="Last Name" required type="text"
+                            value="{{ user.last_name if user else '' }}">
+                        <span class="help-block">Write the user last name</span>
+                    </td>
+                </tr>
+                <tr>
+                    <td class="col-lg-2">
+                        <label for="username" control-label>
+                            User Name
+                            <strong style="color: red">&#42;</strong>
+                        </label>
+                    </td>
+                    <td>
+                        <input class="form-control" id="username" maxlength="512" name="username"
+                            placeholder="User Name" required type="text"
+                            value="{{ user.username if user else '' }}">
+                        <span class="help-block">Username must be unique</span>
+                    </td>
+                </tr>
+                <tr>
+                    <td class="col-lg-2">
+                        <label for="active" control-label>
+                            Is Active?
+
+                        </label>
+                    </td>
+                    <td>
+                        <input id="is_active" name="active" type="checkbox"
+                        {% if user and user.active|trim == 'True' %}checked{% endif %}>
+                        <span class="help-block">It's not a good policy to remove a user, just make it
+                            inactive</span>
+
+                    </td>
+                </tr>
+                <tr>
+                    <td class="col-lg-2">
+                        <label for="email" control-label>
+                            Email
+                            <strong style="color: red">&#42;</strong>
+                        </label>
+                    </td>
+                    <td>
+                        <input class="form-control" id="email" maxlength="512" name="email"
+                            placeholder="Email" required type="text"
+                            value="{{ user.email if user else '' }}">
+                        <span class="help-block">The user's email, this will also be used for OID auth</span>
+                    </td>
+                </tr>                       
+                {% if user == "" %}
+
+                <tr>
+                    <td class="col-lg-2">
+                        <label for="password" control-label>
+                            Password
+
+                            <strong style="color: red">&#42;</strong>
+
+                        </label>
+                    </td>
+                    <td>
+                        <input class="form-control" id="password" name="password" placeholder="Password"
+                            required type="password" value="">
+                        <span class="help-block">The user's password for authentication</span>
+
+                    </td>
+                </tr>
+                <tr>
+                    <td class="col-lg-2">
+                        <label for="conf_password" control-label>
+                            Confirm Password
+                            <strong style="color: red">&#42;</strong>
+                        </label>
+                    </td>
+                    <td>
+                        <input class="form-control" id="confirm_password" name="confirm_password"
+                            placeholder="Confirm Password" required type="password"
+                            value="">
+                        <span class="help-block">Please rewrite the user's password to confirm</span>
+                    </td>
+                </tr>
+                {% endif %}
+                <tr>
+                    <td class="col-lg-2">
+                        <label for="roles" class="control-label">
+                            Role
+                            <strong style="color: red">*</strong>
+                        </label>
+                    </td>
+                    <td>
+                        
+                        <select class="my_select2 form-control" data-placeholder="Select Value" id="role" name="role" required tabindex="-1" aria-hidden="true">
+                            <!-- For edit form the user role want to select -->
+                            {% if user_role and user_role == role_list.id %}
+                                <option value="{{ role_list.id }}">{{ role_list.name }}</option>
+                            {% endif %}
+                            <!-- For add Form-->
+                            {% if user_role == "" and role_list %}
+                                <option value="{{ role_list.id }}">{{ role_list.name }}</option>
+                            {% endif %}
+                        </select>
+                        <span class="help-block">The user role on the application, this will associate with a list of permissions</span>
+                    </td>
+                </tr>
+                {% if is_superadmin == 1 %}
+                <tr>
+                    <td class="col-lg-2">
+                        <label for="username" class="control-label">
+                            User Limit
+                            <strong style="color: red">&#42;</strong>
+                        </label>
+                    </td>
+                    <td>
+                        <input class="form-control" id="user_limit" maxlength="512" name="user_limit"
+                            placeholder="User Limit" required type="number"
+                            min="1" step="1" 
+                            value="{{ user.user_limit if user else '' }}">
+                        <span class="help-block">Please enter a valid user limit. The value must be a positive number greater than zero. Zero and negative numbers are not allowed.</span>
+                    </td>
+                </tr>                
+                {% endif %}
+            </table>
+        </div>
+        <div class="well well-sm">
+            {% if user and user.id%}
+            <button type="button" id="edit_user" class="custom_butt_col btn  btn-sm btn-primary">Save
+                <i class="fa fa-save "></i></button>
+            {% else %}
+            <button type="button" id="add_user" class="custom_butt_col btn  btn-sm btn-primary">Save
+                <i class="fa fa-save"></i></button>
+            {% endif %}
+
+            <a href="" class="btn btn-sm btn-default goBack custom_butt_col" data-toggle="tooltip" rel="tooltip"
+                title="Back">
+                <span class="sr-only">Back</span>
+                <i class="fa fa-arrow-left"></i>
+            </a>
+        </div>
+    </form>    
+</div>
+</div>
+
+<div class="center-container" id="myWizardContainer">
+    <div>
+        <div class="stepwizard">
+            <div class="stepwizard-row setup-panel"></div>
+        </div>
+    </div>
+</div>
+</div>
+{% extends 'appbuilder/base.html' %} {% block head_css %} {{ super() }}
+<link rel="stylesheet" type="text/css" href="{{ url_for('static', filename='main/css/gpt_type_list.css') }}" />
+<link
+  rel="stylesheet"
+  type="text/css"
+  href="{{ url_for('static', filename='main/css/theme.css') }}"
+/>
+{% endblock %}

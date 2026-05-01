@@ -1,0 +1,131 @@
+<script src="{{url_for('static',filename='main/js/jquery.js')}}"></script>
+<script src="{{url_for('static',filename='main/js/miscellaneous.js')}}"></script>
+<link href="https://fonts.googleapis.com/css2?family=Oxygen:wght@300;400;700&display=swap" rel="stylesheet">
+
+<link rel="stylesheet" href="{{url_for('static',filename='main/css/miscellaneous.css')}}" />
+<link rel="stylesheet" href="{{url_for('static',filename='main/css/workflow.css')}}" />
+<meta name="csrf-token" content="{{ csrf_token() }}">
+<div class="">
+
+  <div class="container list-view">
+    <h2 class="text-center" style="margin-top: 50px;">Workflows</h2>
+    <div class="toast" style="text-align: center; font-size: 20px;"></div>
+
+    <div class="row list-container">
+      <div class="col-lg-8 workflow-list-container">
+        {% if workflow_info %} {% for workflow in workflow_info %}
+        <div class="col-md-6 workflow-{{workflow['id']}}" style="margin-bottom: 20px">
+          <div class="row d-flex">
+            {% if role_name and role_name != 'Default User' %}
+            <div id="workflow_access">
+              <button type="button" data-workflow_id="{{ workflow['id'] }}" id="assign_workflow"
+                class="btn btn-primary mb-3 w-100 h-100 custom_butt_col assign_workflow">
+                <span class="fas fa-user-lock" aria-hidden="true"></span>
+              </button>
+            </div>
+            {% endif %}
+            <div class="col-md-10 list-items" style="padding-right: 0;padding-left: 0">
+              <a href="{{ url_for('WorkFlows.prompt', workflow_id=workflow['id']) }}"
+                onclick="saveDataLocalstorage(this)" data-workflow="{{workflow}}" class="list-group-item"
+                style="border-radius: 5px 0 0 5px;">
+                <!-- <a href="{{ url_for('WorkFlows.prompt', workflow_id=workflow['id']) }}" onclick="saveDataLocalstorage(this)" data-workflow="{{ workflow }}" class="list-group-item"> -->
+                <div class="list-group-item-heading mb-0 text-list">
+                  {{ workflow['name'] }}
+                </div>
+              </a>
+            </div>
+            <div class="col-md-2" id="workflow_edit">
+              <button type="button" class="custom_butt_col btn btn-primary mb-3 w-100 h-100"
+                onclick="window.location.href='/workflow_builder/edit/{{workflow["id"]}}'" 
+                {% if is_superadmin == 1 or role_name == 'Client Admin' or role_name == 'Super Admin' %} style="border-radius: 0;" {% endif %}>
+                <i class="fa fa-edit"></i>
+              </button>
+              {% if is_superadmin == 1 or role_name== 'Client Admin' or role_name == 'Super Admin' %}
+              <button 
+                class="delete-workflow custom_butt_col btn btn-primary mb-3 w-100 h-100" 
+                data-id="{{workflow['id']}}">
+                <i class="fa fa-trash"></i>
+              </button>
+              {% endif %}
+            </div>
+          </div>
+        </div>
+        {% endfor %} {% else %}
+        <div class="notFound-container alert ">No Workflow Found</div>
+        <div class="redirect-container">
+          <a href="/workflow_builder/" class="redirect">Click here to create a workflow</a>
+        </div>
+        {% endif %}
+      </div>
+    </div>
+  </div>
+</div>
+<!-- Modal for Workflow-User Access Control -->
+<div id="workflow-access-control-modal" class="modal" style="display:none;">
+  <div class="workflow-access-modal-content">
+    <span class="close">&times;</span>
+    <h3>Workflow User Access</h3>
+    <div>
+      <!-- Search form -->
+      <form id="modal-workflow-search-form" class="form-inline mb-3">
+        <input type="search" class="form-control mr-sm-2" placeholder="Search..." aria-label="Search"
+          name="modal_search" id="modal-workflow-search-input">
+      </form>
+    </div>
+    <table class="table table-bordered" style="margin-top: 20px;">
+      <thead>
+        <tr>
+          <!-- <th><input type="checkbox" id="select-all-users"></th> -->
+          <th></th>
+          <th>User Name</th>
+          <th>Email</th>
+          <th></th>
+        </tr>
+      </thead>
+      <tbody>
+        <!-- Dynamic user data goes here -->
+      </tbody>
+    </table>
+
+    <div class="d-flex align-items-center mt-3">
+      <!-- Update Access button on the left side -->
+      <button id="update-user-workflow-access" class="custom_butt_col btn btn-primary">Update Access</button>
+
+      <!-- Pagination on the right side -->
+      <div class="d-flex flex-grow-1 justify-content-end" style="margin-left: auto;">
+        <nav aria-label="Page navigation" class="pagenav">
+          <ul class="pagination" id="workflow_user_modal_pagination" style="margin: 0;">
+          </ul>
+        </nav>
+      </div>
+    </div>
+
+
+
+  </div>
+</div>
+<!-- delete confirmation modal -->
+<div class="modal fade" id="deleteConfirmationModal" tabindex="-1" role="dialog"
+aria-labelledby="deleteConfirmationModalLabel" aria-hidden="true">
+<div class="modal-dialog" role="document">
+    <div class="modal-content">
+        <div class="modal-header">
+            <button type="button" class="close" data-dismiss="modal" aria-label="Close">
+                <span aria-hidden="true">&times;</span>
+            </button>
+            <h4 class="modal-title" id="deleteConfirmationModalLabel">Confirmation</h4>
+        </div>
+        <div class="modal-body">
+            <p id="deleteConfirmationMessage">Are you sure you want to delete this Workflow?</p>
+        </div>
+        <div class="modal-footer">
+            <button type="button" class="btn btn-default custom_butt_col" data-dismiss="modal">Cancel</button>
+            <button type="button" id="deleteConfirmButton" class="btn btn-primary custom_butt_col">Confirm</button>
+        </div>
+    </div>
+</div>
+</div>
+{% extends 'appbuilder/base.html' %} {% block head_css %} {{ super() }}
+<link rel="stylesheet" type="text/css" href="{{ url_for('static', filename='main/css/theme.css') }}" />
+<link rel="stylesheet" type="text/css" href="{{ url_for('static', filename='main/css/workflow.css') }}" />
+{% endblock %}
